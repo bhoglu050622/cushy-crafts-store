@@ -1,67 +1,68 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
 
 const categories = [
   {
     name: "Pillow Covers",
     slug: "pillow-covers",
-    description: "Add a pop of color to your living room",
-    emoji: "🛋️",
-    color: "from-primary/10 to-warm/10",
+    description: "Add a pop of color & comfort",
   },
   {
     name: "Table Cloths",
     slug: "table-cloths",
-    description: "Elegant designs for every dining occasion",
-    emoji: "🍽️",
-    color: "from-accent/10 to-success/10",
+    description: "Elegant designs for every occasion",
   },
   {
     name: "Curtains",
     slug: "curtains",
     description: "Transform your windows, transform your space",
-    emoji: "🪟",
-    color: "from-gold/10 to-primary/10",
   },
 ];
 
 const CategoryShowcase = () => {
   return (
-    <section className="py-16 md:py-24">
+    <section className="py-20 md:py-28">
       <div className="container">
-        <div className="text-center mb-12">
-          <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-3">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
+        >
+          <p className="text-[11px] tracking-widest text-muted-foreground mb-4">EXPLORE</p>
+          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl text-foreground">
             Shop by Category
           </h2>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            Curated collections for every corner of your home
-          </p>
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
           {categories.map((cat, i) => (
             <motion.div
               key={cat.slug}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
+              transition={{ duration: 0.6, delay: i * 0.15 }}
             >
               <Link
                 to={`/category/${cat.slug}`}
-                className={`group block rounded-2xl bg-gradient-to-br ${cat.color} p-8 md:p-10 border border-border hover:border-primary/30 transition-all duration-300 hover:shadow-lg`}
+                className="group block"
               >
-                <span className="text-5xl mb-6 block">{cat.emoji}</span>
-                <h3 className="font-display text-xl font-bold text-foreground mb-2">
+                {/* Image placeholder */}
+                <div className="aspect-[4/5] bg-muted mb-5 overflow-hidden relative">
+                  <div className="absolute inset-0 bg-gradient-to-t from-foreground/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-6xl opacity-20">🎨</span>
+                  </div>
+                </div>
+                
+                <h3 className="font-display text-xl md:text-2xl text-foreground mb-1 group-hover:text-accent transition-colors">
                   {cat.name}
                 </h3>
-                <p className="text-muted-foreground text-sm mb-6">
+                <p className="text-sm text-muted-foreground">
                   {cat.description}
                 </p>
-                <span className="inline-flex items-center gap-1 text-primary text-sm font-medium group-hover:gap-2 transition-all">
-                  Browse Collection <ArrowRight className="h-4 w-4" />
-                </span>
               </Link>
             </motion.div>
           ))}

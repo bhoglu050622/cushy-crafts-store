@@ -1,26 +1,22 @@
 import { Truck, ShieldCheck, RotateCcw, CreditCard } from "lucide-react";
 
 const badges = [
-  { icon: Truck, label: "Free Shipping", sub: "Orders above ₹999" },
-  { icon: ShieldCheck, label: "Quality Assured", sub: "100% genuine products" },
-  { icon: RotateCcw, label: "Easy Returns", sub: "7-day return policy" },
-  { icon: CreditCard, label: "Secure Payments", sub: "UPI, Cards, COD" },
+  { icon: Truck, label: "Free Shipping", sub: "Orders ₹999+" },
+  { icon: ShieldCheck, label: "Quality Assured", sub: "100% Genuine" },
+  { icon: RotateCcw, label: "Easy Returns", sub: "7-Day Policy" },
+  { icon: CreditCard, label: "Secure Pay", sub: "UPI, Cards, COD" },
 ];
 
 const TrustBadges = () => {
   return (
-    <section className="py-10 border-y border-border">
+    <section className="py-10 md:py-12 border-y border-border/50">
       <div className="container">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           {badges.map((badge) => (
-            <div key={badge.label} className="flex items-center gap-3">
-              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <badge.icon className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-foreground">{badge.label}</p>
-                <p className="text-xs text-muted-foreground">{badge.sub}</p>
-              </div>
+            <div key={badge.label} className="text-center">
+              <badge.icon className="h-6 w-6 text-foreground/60 mx-auto mb-3" strokeWidth={1.5} />
+              <p className="text-xs font-medium text-foreground tracking-wide">{badge.label}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{badge.sub}</p>
             </div>
           ))}
         </div>
