@@ -1,97 +1,93 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ShoppingBag, Search, User, Menu, X, Heart } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Search, User, Menu, X, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
-  { label: "Home", href: "/" },
-  { label: "Pillow Covers", href: "/category/pillow-covers" },
-  { label: "Table Cloths", href: "/category/table-cloths" },
-  { label: "Curtains", href: "/category/curtains" },
+  { label: "PILLOW COVERS", href: "/category/pillow-covers" },
+  { label: "TABLE CLOTHS", href: "/category/table-cloths" },
+  { label: "CURTAINS", href: "/category/curtains" },
+  { label: "SHOP BY ROOM", href: "/collections" },
 ];
 
 const Header = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
-      {/* Top bar */}
-      <div className="bg-foreground text-background text-xs py-1.5 text-center tracking-wide">
-        Free Shipping on Orders Above ₹999 | COD Available
+    <header className="fixed top-0 left-0 right-0 z-50">
+      {/* Announcement bar */}
+      <div className="bg-foreground/90 text-background text-[11px] py-2 text-center tracking-widest font-light">
+        Art, created for the spaces you call home.
       </div>
 
-      <div className="container flex items-center justify-between h-16">
-        {/* Mobile menu toggle */}
-        <button
-          className="lg:hidden p-2 -ml-2"
-          onClick={() => setMobileOpen(!mobileOpen)}
-          aria-label="Toggle menu"
-        >
-          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
+      <div className="bg-background/80 backdrop-blur-md border-b border-border/50">
+        <div className="container flex items-center justify-between h-16 lg:h-20">
+          {/* Left: Search */}
+          <div className="flex items-center gap-4 w-32">
+            <button className="p-2 hover:opacity-70 transition-opacity" aria-label="Search">
+              <Search className="h-5 w-5 text-foreground" strokeWidth={1.5} />
+            </button>
+          </div>
 
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2">
-          <span className="font-display text-xl md:text-2xl font-bold tracking-tight text-foreground">
-            LifeN<span className="text-primary">Colors</span>
-          </span>
-        </Link>
+          {/* Center: Logo */}
+          <Link to="/" className="absolute left-1/2 -translate-x-1/2">
+            <h1 className="font-display text-2xl lg:text-3xl text-foreground tracking-wide">
+              Life n Colors
+            </h1>
+          </Link>
+
+          {/* Right: Actions */}
+          <div className="flex items-center gap-3 w-32 justify-end">
+            <Link to="/auth" className="p-2 hover:opacity-70 transition-opacity hidden sm:block">
+              <User className="h-5 w-5 text-foreground" strokeWidth={1.5} />
+            </Link>
+            <Link to="/cart" className="p-2 hover:opacity-70 transition-opacity relative">
+              <ShoppingBag className="h-5 w-5 text-foreground" strokeWidth={1.5} />
+              <span className="absolute top-0.5 right-0.5 bg-accent text-accent-foreground text-[9px] font-medium rounded-full h-4 w-4 flex items-center justify-center">
+                0
+              </span>
+            </Link>
+            <button
+              className="p-2 lg:hidden hover:opacity-70 transition-opacity"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label="Menu"
+            >
+              {mobileOpen ? (
+                <X className="h-5 w-5 text-foreground" strokeWidth={1.5} />
+              ) : (
+                <Menu className="h-5 w-5 text-foreground" strokeWidth={1.5} />
+              )}
+            </button>
+          </div>
+        </div>
 
         {/* Desktop Nav */}
-        <nav className="hidden lg:flex items-center gap-8">
+        <nav className="hidden lg:flex justify-center gap-10 pb-4">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               to={link.href}
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="text-[11px] font-medium tracking-widest text-foreground/70 hover:text-foreground transition-colors"
             >
               {link.label}
             </Link>
           ))}
         </nav>
-
-        {/* Actions */}
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="hidden sm:flex" asChild>
-            <Link to="/search">
-              <Search className="h-5 w-5" />
-            </Link>
-          </Button>
-          <Button variant="ghost" size="icon" className="hidden sm:flex" asChild>
-            <Link to="/wishlist">
-              <Heart className="h-5 w-5" />
-            </Link>
-          </Button>
-          <Button variant="ghost" size="icon" asChild>
-            <Link to="/auth">
-              <User className="h-5 w-5" />
-            </Link>
-          </Button>
-          <Button variant="ghost" size="icon" className="relative" asChild>
-            <Link to="/cart">
-              <ShoppingBag className="h-5 w-5" />
-              <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
-                0
-              </span>
-            </Link>
-          </Button>
-        </div>
       </div>
 
       {/* Mobile Nav */}
       <div
         className={cn(
-          "lg:hidden overflow-hidden transition-all duration-300 border-t border-border",
-          mobileOpen ? "max-h-60" : "max-h-0 border-t-0"
+          "lg:hidden fixed inset-x-0 top-[105px] bg-background/98 backdrop-blur-md border-b border-border transition-all duration-300 overflow-hidden",
+          mobileOpen ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
         )}
       >
-        <nav className="container py-4 flex flex-col gap-3">
+        <nav className="container py-6 flex flex-col gap-4">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               to={link.href}
-              className="text-sm font-medium text-muted-foreground hover:text-foreground py-1"
+              className="text-xs font-medium tracking-widest text-foreground/70 hover:text-foreground py-2"
               onClick={() => setMobileOpen(false)}
             >
               {link.label}

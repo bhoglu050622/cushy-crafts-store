@@ -1,65 +1,83 @@
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
 
 const HeroBanner = () => {
   return (
-    <section className="relative overflow-hidden bg-secondary min-h-[70vh] flex items-center">
-      {/* Background pattern */}
-      <div className="absolute inset-0 opacity-[0.03]" style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-      }} />
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-secondary">
+      {/* Background image placeholder - soft pattern */}
+      <div 
+        className="absolute inset-0 opacity-[0.04]"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 50m-40 0a40,40 0 1,0 80,0a40,40 0 1,0 -80,0' fill='none' stroke='%23000' stroke-width='0.5'/%3E%3C/svg%3E")`,
+          backgroundSize: '200px',
+        }}
+      />
+      
+      {/* Soft gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-b from-background/20 via-transparent to-background/40" />
 
-      <div className="container relative z-10">
-        <div className="max-w-2xl">
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-primary font-medium text-sm tracking-widest uppercase mb-4"
-          >
-            Premium Home Textiles
-          </motion.p>
+      <div className="container relative z-10 text-center pt-32 pb-20">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+        >
+          <h1 className="font-display text-5xl md:text-6xl lg:text-7xl text-foreground mb-6 tracking-wide">
+            Life n Colors
+          </h1>
+        </motion.div>
 
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight mb-6"
-          >
-            Transform Your Home with{" "}
-            <span className="text-primary">Stunning Designs</span>
-          </motion.h1>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+        >
+          <h2 className="font-display text-xl md:text-2xl lg:text-3xl text-foreground/80 mb-8 font-normal italic">
+            Weaving beautiful life stories
+          </h2>
+        </motion.div>
 
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-muted-foreground text-lg md:text-xl mb-8 leading-relaxed max-w-lg"
-          >
-            Discover handpicked pillow covers, table cloths & curtains. Designed to add color, comfort & character to every room.
-          </motion.p>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, delay: 0.4 }}
+        >
+          <p className="text-sm text-muted-foreground tracking-widest mb-12">
+            Pillow Covers | Table Cloths | Curtains
+          </p>
+        </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="flex flex-wrap gap-4"
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.6, ease: "easeOut" }}
+        >
+          <Link
+            to="/collections"
+            className="inline-block bg-foreground text-background px-10 py-4 text-xs tracking-widest font-medium hover:bg-foreground/90 transition-colors"
           >
-            <Button size="lg" className="rounded-full px-8 gap-2" asChild>
-              <Link to="/category/pillow-covers">
-                Shop Now <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" className="rounded-full px-8" asChild>
-              <Link to="/category/curtains">
-                Explore Curtains
-              </Link>
-            </Button>
-          </motion.div>
-        </div>
+            SHOP NOW
+          </Link>
+        </motion.div>
       </div>
+
+      {/* Featured In section */}
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.8, delay: 1 }}
+        className="absolute bottom-12 left-0 right-0"
+      >
+        <p className="text-[10px] text-muted-foreground tracking-widest text-center mb-4">
+          AS FEATURED IN
+        </p>
+        <div className="flex justify-center items-center gap-8 md:gap-12 opacity-40">
+          <span className="text-sm font-display italic">Vogue</span>
+          <span className="text-sm font-display italic">AD India</span>
+          <span className="text-sm font-display italic">Elle Decor</span>
+          <span className="text-sm font-display italic hidden md:block">Architectural Digest</span>
+        </div>
+      </motion.div>
     </section>
   );
 };

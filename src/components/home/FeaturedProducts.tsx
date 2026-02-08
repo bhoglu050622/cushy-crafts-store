@@ -1,17 +1,16 @@
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Heart, ShoppingBag } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 // Mock data - will be replaced with Supabase data
 const mockProducts = [
-  { id: "1", name: "Tropical Leaf Pillow Cover", price: 499, comparePrice: 799, category: "Pillow Covers", color: "Green" },
-  { id: "2", name: "Moroccan Pattern Table Cloth", price: 899, comparePrice: 1299, category: "Table Cloths", color: "Blue" },
-  { id: "3", name: "Sheer Linen Curtain", price: 1499, comparePrice: 2199, category: "Curtains", color: "Ivory" },
-  { id: "4", name: "Geometric Velvet Pillow Cover", price: 599, comparePrice: 999, category: "Pillow Covers", color: "Mustard" },
-  { id: "5", name: "Floral Block Print Table Cloth", price: 749, comparePrice: null, category: "Table Cloths", color: "Red" },
-  { id: "6", name: "Blackout Velvet Curtain", price: 1999, comparePrice: 2999, category: "Curtains", color: "Emerald" },
-  { id: "7", name: "Boho Tassel Pillow Cover", price: 449, comparePrice: 699, category: "Pillow Covers", color: "Terracotta" },
-  { id: "8", name: "Jacquard Silk Table Cloth", price: 1199, comparePrice: 1799, category: "Table Cloths", color: "Gold" },
+  { id: "1", name: "Tropical Leaf Pillow Cover", price: 499, comparePrice: 799, category: "Pillow Covers" },
+  { id: "2", name: "Moroccan Pattern Table Cloth", price: 899, comparePrice: 1299, category: "Table Cloths" },
+  { id: "3", name: "Sheer Linen Curtain", price: 1499, comparePrice: 2199, category: "Curtains" },
+  { id: "4", name: "Geometric Velvet Pillow Cover", price: 599, comparePrice: 999, category: "Pillow Covers" },
+  { id: "5", name: "Floral Block Print Table Cloth", price: 749, comparePrice: null, category: "Table Cloths" },
+  { id: "6", name: "Blackout Velvet Curtain", price: 1999, comparePrice: 2999, category: "Curtains" },
+  { id: "7", name: "Boho Tassel Pillow Cover", price: 449, comparePrice: 699, category: "Pillow Covers" },
+  { id: "8", name: "Jacquard Silk Table Cloth", price: 1199, comparePrice: 1799, category: "Table Cloths" },
 ];
 
 const formatPrice = (price: number) => {
@@ -24,54 +23,59 @@ const formatPrice = (price: number) => {
 
 const FeaturedProducts = () => {
   return (
-    <section className="py-16 md:py-24 bg-secondary/50">
+    <section className="py-20 md:py-28 bg-card/50">
       <div className="container">
-        <div className="text-center mb-12">
-          <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-3">
-            Trending Now
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
+        >
+          <p className="text-[11px] tracking-widest text-muted-foreground mb-4">THE COLLECTIVE CHOICE</p>
+          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl text-foreground">
+            Best Sellers
           </h2>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            Our most loved designs, handpicked for you
-          </p>
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8 md:gap-x-6 md:gap-y-12">
           {mockProducts.map((product, i) => (
             <motion.div
               key={product.id}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: i * 0.05 }}
-              className="group"
+              transition={{ duration: 0.5, delay: i * 0.05 }}
             >
-              <div className="relative rounded-xl overflow-hidden bg-card border border-border hover:border-primary/20 transition-all duration-300 hover:shadow-md">
-                {/* Image placeholder */}
-                <div className="aspect-square bg-muted flex items-center justify-center relative overflow-hidden">
-                  <span className="text-4xl opacity-30">🎨</span>
-
-                  {/* Quick actions */}
-                  <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="p-2 bg-background/90 rounded-full hover:bg-background transition-colors">
-                      <Heart className="h-4 w-4 text-foreground" />
+              <Link to={`/product/${product.id}`} className="group block">
+                {/* Image */}
+                <div className="aspect-square bg-muted mb-4 overflow-hidden relative">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-4xl opacity-20">🎨</span>
+                  </div>
+                  
+                  {/* Quick add button */}
+                  <div className="absolute bottom-0 left-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <button className="w-full bg-foreground/90 text-background text-[10px] tracking-widest py-2.5 hover:bg-foreground transition-colors">
+                      QUICK ADD
                     </button>
                   </div>
 
                   {/* Discount badge */}
                   {product.comparePrice && (
-                    <span className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs font-bold px-2 py-1 rounded-full">
-                      {Math.round((1 - product.price / product.comparePrice) * 100)}% OFF
+                    <span className="absolute top-3 left-3 bg-accent text-accent-foreground text-[10px] tracking-wide px-2 py-1">
+                      SALE
                     </span>
                   )}
                 </div>
 
-                <div className="p-3 md:p-4">
-                  <p className="text-xs text-muted-foreground mb-1">{product.category}</p>
-                  <h3 className="text-sm font-medium text-foreground line-clamp-2 mb-2 leading-snug">
+                <div>
+                  <p className="text-[10px] text-muted-foreground tracking-wide mb-1">{product.category}</p>
+                  <h3 className="text-sm text-foreground mb-2 leading-snug line-clamp-2 group-hover:text-accent transition-colors">
                     {product.name}
                   </h3>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-foreground">{formatPrice(product.price)}</span>
+                    <span className="text-sm text-foreground">{formatPrice(product.price)}</span>
                     {product.comparePrice && (
                       <span className="text-xs text-muted-foreground line-through">
                         {formatPrice(product.comparePrice)}
@@ -79,16 +83,25 @@ const FeaturedProducts = () => {
                     )}
                   </div>
                 </div>
-              </div>
+              </Link>
             </motion.div>
           ))}
         </div>
 
-        <div className="text-center mt-10">
-          <Button variant="outline" size="lg" className="rounded-full px-8">
-            View All Products
-          </Button>
-        </div>
+        <motion.div 
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="text-center mt-14"
+        >
+          <Link
+            to="/collections"
+            className="inline-block border border-foreground text-foreground px-10 py-3.5 text-xs tracking-widest font-medium hover:bg-foreground hover:text-background transition-colors"
+          >
+            VIEW ALL
+          </Link>
+        </motion.div>
       </div>
     </section>
   );
