@@ -1,165 +1,236 @@
 
+# Complete Indian eCommerce Store Implementation
 
-# 🛍️ Indian eCommerce Platform — Full Plan
+## Current State
+- Database schema complete (13 tables with RLS policies)
+- 3 categories seeded (Pillow Covers, Table Cloths, Curtains)
+- Homepage with mock data and lifencolors.in-inspired design
+- No authentication, no product pages, no cart, no admin panel
 
-## Overview
-A modern, scalable Indian eCommerce website for **Pillow Covers, Table Cloths, and Curtains** — built with React + Supabase backend, Razorpay payments, GST invoicing, and Indian-focused UX. Inspired by lifencolors.in but with premium UI/UX.
+## Implementation Scope
 
----
+### 1. Authentication System
+Create complete auth flow for customers and admin access:
+- `/auth` page with login/signup tabs
+- Email/password authentication with validation
+- Session management with auth state context
+- Protected routes for admin and user areas
+- Profile management page
 
-## Phase 1: Foundation & Database Schema
+### 2. Product Catalog Pages
 
-### Database Design (Supabase)
-- **Categories** table (Pillow Covers, Table Cloths, Curtains)
-- **Products** table with SEO fields, descriptions, design names
-- **Product Variants** table (color, size, SKU, price, stock quantity, images)
-- **Product Images** table with Supabase Storage for optimized images
-- **Users / Profiles** table for customer data
-- **User Roles** table (Admin / Staff / Customer) with secure role-based access
-- **Addresses** table with Indian fields (State, City, Pincode)
-- **Orders** & **Order Items** tables with status lifecycle
-- **Payment Records** table (Razorpay integration)
-- **GST Settings** table (configurable rates per category/product)
-- **Shipping Rules** table (flat rate, free threshold, COD rules)
-- **Pincode Serviceability** table for delivery validation
+**Category Page (`/category/:slug`)**
+- Dynamic product grid from database
+- Filtering: color, size, price range, design
+- Sorting: price (low/high), newest, popularity
+- Pagination (20 products per page)
+- Mobile-friendly filter drawer
 
-### Authentication
-- Email/password signup & login
-- Role-based access control (Admin, Staff, Customer)
-- Protected admin routes
-
----
-
-## Phase 2: Storefront (Customer-Facing UI)
-
-### Homepage
-- Hero banner with featured collections
-- Category showcase (Pillow Covers, Table Cloths, Curtains)
-- Trending/new arrivals section
-- Trust badges, ₹ currency display throughout
-
-### Product Listing Pages
-- Grid view with product cards (image, name, price in ₹)
-- Fast filtering: by category, color, design, size, price range
-- Sort by: price, popularity, newest
-- Pagination / infinite scroll for 10k+ SKUs
-
-### Product Detail Page
-- High-res image gallery with zoom
-- Color & size variant selector
+**Product Detail Page (`/product/:slug`)**
+- Image gallery with zoom/lightbox
+- Variant selector (color/size dropdowns)
 - Stock availability indicator
-- Add to cart with quantity selector
+- Price display with GST breakdown
+- Add to cart with quantity
 - Related products section
+- Product specifications accordion
 
-### Cart & Wishlist
-- Persistent cart (synced with Supabase for logged-in users, localStorage for guests)
-- Quantity adjustment, variant display
-- Estimated shipping & COD fee preview
+### 3. Shopping Cart System
+- Cart context with localStorage persistence
+- Guest cart synced to database on login
+- `/cart` page with:
+  - Product list with images and variants
+  - Quantity adjustment
+  - Remove item functionality
+  - Subtotal, shipping estimate, GST preview
+  - Pincode checker for delivery availability
 
-### Checkout Flow
-- Guest checkout supported
-- Indian address form (Name, Phone, Address, City, State, Pincode)
-- Pincode validation for delivery availability
-- Shipping method selection with calculated charges
-- Payment method selection (Razorpay: UPI, Cards, Net Banking, Wallets, COD)
-- Order summary with GST breakdown
-- Optional GSTIN input for business customers
+### 4. Checkout Flow
 
----
+**Checkout Page (`/checkout`)**
+- Step 1: Shipping address form (Indian format)
+- Step 2: Payment method selection
+- Step 3: Order review with GST breakdown
+- Pincode validation for serviceability
+- Guest checkout support
+- Optional GSTIN input for B2B
 
-## Phase 3: Razorpay Payment Integration
+### 5. Razorpay Payment Integration
 
-### Edge Function for Razorpay
-- Create Razorpay order via edge function (secure API key handling)
-- Frontend Razorpay checkout modal integration
-- Webhook edge function for payment verification
-- Payment status tracking: Pending → Paid → Failed → Refunded
+**Edge Functions**
+- `create-razorpay-order`: Generate payment order
+- `verify-payment`: Webhook for payment verification
+- `process-refund`: Admin refund processing
 
-### COD Support
-- COD availability rules (minimum cart value, pincode-based)
-- Optional COD fee added at checkout
-- COD orders marked as "Pending Payment"
+**Frontend Integration**
+- Razorpay checkout modal
+- Payment status handling
+- COD option with fee calculation
 
-### Refunds
-- Full and partial refund support via admin panel
-- Razorpay refund API integration through edge function
+### 6. Order Management
 
----
+**Customer Side**
+- `/account/orders` - Order history
+- Order detail page with status timeline
+- Invoice download
 
-## Phase 4: GST & Invoicing
+**Order Flow**
+- Order number generation
+- Status lifecycle: Pending -> Confirmed -> Shipped -> Delivered
+- Email notifications (future enhancement)
 
-### GST Logic
-- Admin-configurable GST rates per product/category
-- CGST/SGST (intra-state) vs IGST (inter-state) auto-calculation based on shipping address
-- GST-inclusive and exclusive pricing support
+### 7. Admin Dashboard (`/admin/*`)
 
-### Invoice Generation
-- Auto-generated GST-compliant invoices on order confirmation
-- Downloadable PDF invoices (generated via edge function)
-- Invoice number sequencing
-- Customer GSTIN on invoice if provided
+**Dashboard Home**
+- Sales overview cards
+- Recent orders
+- Low stock alerts
+- Quick stats (revenue, orders, customers)
 
----
-
-## Phase 5: Admin Dashboard
-
-### Product Management
-- Add/edit/delete products and variants
-- Bulk product upload via CSV/Excel (parsed in edge function)
-- Image upload with optimization
+**Product Management**
+- Product list with search/filter
+- Add/Edit product form with variants
+- Image upload to storage
+- Bulk CSV import (edge function)
 - SKU management
 
-### Inventory Management
-- Real-time stock levels per variant
-- Low-stock alerts (configurable threshold)
-- Stock adjustment logs
-
-### Order Management
+**Order Management**
 - Order list with status filters
-- Status updates: Confirmed → Shipped → Delivered → Returned
-- Order details with payment info, shipping address, items
-- Refund processing
+- Order detail with actions (update status, refund)
+- Print invoice/packing slip
 
-### Customer Management
+**Customer Management**
 - Customer list with order history
-- Address book management
+- Address management
 
-### Settings
-- GST rate configuration
-- Shipping rules (flat rate, free shipping threshold, COD fees)
-- Pincode serviceability management
-- Store information & invoice settings
+**Settings**
+- GST configuration
+- Shipping rules
+- Pincode serviceability
+- Store information
+
+### 8. Additional Pages
+
+**Static Pages**
+- `/about` - About the brand
+- `/contact` - Contact form
+- `/shipping-policy` - Shipping info
+- `/returns` - Returns policy
+- `/privacy` - Privacy policy
+- `/terms` - Terms of service
+
+**User Account Pages**
+- `/account` - Profile dashboard
+- `/account/addresses` - Saved addresses
+- `/account/orders` - Order history
+- `/wishlist` - Saved products
+
+### 9. Sample Data Seeding
+- 20-30 sample products across categories
+- Multiple variants per product
+- Sample images (placeholder URLs)
+- Sample pincodes for testing
+
+## File Structure
+
+```text
+src/
+├── components/
+│   ├── auth/
+│   │   ├── LoginForm.tsx
+│   │   ├── SignupForm.tsx
+│   │   └── AuthGuard.tsx
+│   ├── cart/
+│   │   ├── CartItem.tsx
+│   │   ├── CartSummary.tsx
+│   │   └── CartDrawer.tsx
+│   ├── checkout/
+│   │   ├── AddressForm.tsx
+│   │   ├── PaymentMethods.tsx
+│   │   └── OrderSummary.tsx
+│   ├── products/
+│   │   ├── ProductCard.tsx
+│   │   ├── ProductGrid.tsx
+│   │   ├── ProductFilters.tsx
+│   │   ├── VariantSelector.tsx
+│   │   └── ImageGallery.tsx
+│   ├── admin/
+│   │   ├── Sidebar.tsx
+│   │   ├── ProductForm.tsx
+│   │   ├── OrderTable.tsx
+│   │   └── StatsCards.tsx
+│   └── shared/
+│       ├── PincodeChecker.tsx
+│       ├── PriceDisplay.tsx
+│       └── LoadingSpinner.tsx
+├── contexts/
+│   ├── AuthContext.tsx
+│   └── CartContext.tsx
+├── hooks/
+│   ├── useAuth.ts
+│   ├── useCart.ts
+│   ├── useProducts.ts
+│   └── useOrders.ts
+├── pages/
+│   ├── Auth.tsx
+│   ├── Category.tsx
+│   ├── Product.tsx
+│   ├── Cart.tsx
+│   ├── Checkout.tsx
+│   ├── OrderConfirmation.tsx
+│   ├── Account.tsx
+│   ├── admin/
+│   │   ├── Dashboard.tsx
+│   │   ├── Products.tsx
+│   │   ├── Orders.tsx
+│   │   └── Settings.tsx
+│   └── static/
+│       ├── About.tsx
+│       └── Contact.tsx
+└── lib/
+    ├── formatters.ts
+    ├── validators.ts
+    └── razorpay.ts
+
+supabase/
+└── functions/
+    ├── create-razorpay-order/
+    ├── verify-payment/
+    └── generate-invoice/
+```
+
+## Technical Implementation
+
+### Storage Bucket
+- Create `product-images` bucket for product photos
+- RLS policies for admin upload, public read
+
+### Edge Functions
+- Razorpay order creation with secret key
+- Payment verification webhook
+- PDF invoice generation
+
+### Performance
+- React Query for data caching
+- Optimistic updates for cart
+- Image lazy loading
+- Pagination for product lists
+
+## Implementation Order
+1. Authentication system and context
+2. Sample product data seeding
+3. Product listing and detail pages
+4. Cart system with context
+5. Checkout flow with address form
+6. Razorpay integration
+7. Order confirmation and history
+8. Admin dashboard
+9. Static pages and polish
+
+## Required Secrets
+- `RAZORPAY_KEY_ID` - Razorpay API key
+- `RAZORPAY_KEY_SECRET` - Razorpay secret
 
 ---
 
-## Phase 6: Performance & Polish
-
-### Performance Optimization
-- Image lazy loading throughout
-- Supabase query optimization with proper indexes
-- Component code splitting
-- Optimistic UI updates for cart operations
-- Efficient pagination for large product catalogs
-
-### Mobile-First Design
-- Fully responsive across all breakpoints
-- Touch-friendly filters and navigation
-- Mobile-optimized checkout flow
-- Bottom navigation bar on mobile
-
-### Indian UX Details
-- ₹ currency formatting throughout
-- Indian phone number format (+91)
-- State/Pincode auto-suggestions
-- Hindi-friendly typography considerations
-
----
-
-## Technical Architecture Summary
-- **Frontend**: React + Vite + Tailwind CSS + TypeScript
-- **Backend**: Supabase (Database, Auth, Storage, Edge Functions)
-- **Payments**: Razorpay via Supabase Edge Functions
-- **Images**: Supabase Storage with optimization
-- **PDF Invoices**: Generated via Edge Functions
-- **Deployment**: Static build exportable to Hostinger
-
+This plan delivers a complete, production-ready Indian eCommerce store with authentication, full product catalog, cart, Razorpay payments, GST invoicing, and admin CMS - all matching the premium lifencolors.in aesthetic.
