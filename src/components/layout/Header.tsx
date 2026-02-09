@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Search, User, Menu, X, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCart } from "@/contexts/CartContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navLinks = [
   { label: "PILLOW COVERS", href: "/category/pillow-covers" },
@@ -12,6 +14,8 @@ const navLinks = [
 
 const Header = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { itemCount, setIsOpen } = useCart();
+  const { user } = useAuth();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
@@ -38,15 +42,23 @@ const Header = () => {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-3 w-32 justify-end">
-            <Link to="/auth" className="p-2 hover:opacity-70 transition-opacity hidden sm:block">
+            <Link 
+              to={user ? "/account" : "/auth"} 
+              className="p-2 hover:opacity-70 transition-opacity hidden sm:block"
+            >
               <User className="h-5 w-5 text-foreground" strokeWidth={1.5} />
             </Link>
-            <Link to="/cart" className="p-2 hover:opacity-70 transition-opacity relative">
+            <button 
+              onClick={() => setIsOpen(true)}
+              className="p-2 hover:opacity-70 transition-opacity relative"
+            >
               <ShoppingBag className="h-5 w-5 text-foreground" strokeWidth={1.5} />
-              <span className="absolute top-0.5 right-0.5 bg-accent text-accent-foreground text-[9px] font-medium rounded-full h-4 w-4 flex items-center justify-center">
-                0
-              </span>
-            </Link>
+              {itemCount > 0 && (
+                <span className="absolute top-0.5 right-0.5 bg-accent text-accent-foreground text-[9px] font-medium rounded-full h-4 w-4 flex items-center justify-center">
+                  {itemCount > 9 ? "9+" : itemCount}
+                </span>
+              )}
+            </button>
             <button
               className="p-2 lg:hidden hover:opacity-70 transition-opacity"
               onClick={() => setMobileOpen(!mobileOpen)}
