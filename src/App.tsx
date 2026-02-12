@@ -6,11 +6,34 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import CartDrawer from "@/components/cart/CartDrawer";
+
+// Pages
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Category from "./pages/Category";
 import Product from "./pages/Product";
 import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
+import OrderConfirmation from "./pages/OrderConfirmation";
+import Account from "./pages/Account";
+import AccountOrders from "./pages/account/Orders";
+import AccountAddresses from "./pages/account/Addresses";
+
+// Admin
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/Dashboard";
+import AdminProducts from "./pages/admin/Products";
+import AdminOrders from "./pages/admin/Orders";
+import AdminSettings from "./pages/admin/Settings";
+
+// Static
+import About from "./pages/static/About";
+import Contact from "./pages/static/Contact";
+import ShippingPolicy from "./pages/static/ShippingPolicy";
+import ReturnsPolicy from "./pages/static/ReturnsPolicy";
+import Privacy from "./pages/static/Privacy";
+import Terms from "./pages/static/Terms";
+
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,7 +52,31 @@ const App = () => (
               <Route path="/category/:slug" element={<Category />} />
               <Route path="/product/:slug" element={<Product />} />
               <Route path="/cart" element={<Cart />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/order-confirmation/:orderNumber" element={<OrderConfirmation />} />
+
+              {/* Account */}
+              <Route path="/account" element={<Account />}>
+                <Route path="orders" element={<AccountOrders />} />
+                <Route path="addresses" element={<AccountAddresses />} />
+              </Route>
+
+              {/* Admin */}
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="products" element={<AdminProducts />} />
+                <Route path="orders" element={<AdminOrders />} />
+                <Route path="settings" element={<AdminSettings />} />
+              </Route>
+
+              {/* Static */}
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/shipping-policy" element={<ShippingPolicy />} />
+              <Route path="/returns" element={<ReturnsPolicy />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
+
               <Route path="*" element={<NotFound />} />
             </Routes>
             <CartDrawer />
