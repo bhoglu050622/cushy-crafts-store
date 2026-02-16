@@ -8,19 +8,29 @@ const FeaturedProducts = () => {
   const { data: products = [], isLoading } = useFeaturedProducts();
 
   return (
-    <section className="py-20 md:py-28 bg-card/50">
+    <section className="py-24 md:py-32">
       <div className="container">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-16"
+          className="flex flex-col md:flex-row md:items-end md:justify-between mb-16 md:mb-20"
         >
-          <p className="text-[11px] tracking-widest text-muted-foreground mb-4">THE COLLECTIVE CHOICE</p>
-          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl text-foreground">
-            Best Sellers
-          </h2>
+          <div>
+            <p className="text-[11px] tracking-[0.25em] text-muted-foreground mb-4 uppercase">
+              Handpicked for you
+            </p>
+            <h2 className="font-display text-3xl md:text-4xl lg:text-5xl text-foreground">
+              Best Sellers
+            </h2>
+          </div>
+          <Link
+            to="/category/pillow-covers"
+            className="mt-6 md:mt-0 inline-block text-xs tracking-widest uppercase text-foreground font-medium border-b border-foreground/30 pb-1 hover:border-foreground transition-colors self-start md:self-auto"
+          >
+            View all products
+          </Link>
         </motion.div>
 
         {isLoading ? (
@@ -40,21 +50,6 @@ const FeaturedProducts = () => {
             ))}
           </div>
         )}
-
-        <motion.div 
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="text-center mt-14"
-        >
-          <Link
-            to="/category/pillow-covers"
-            className="inline-block border border-foreground text-foreground px-10 py-3.5 text-xs tracking-widest font-medium hover:bg-foreground hover:text-background transition-colors"
-          >
-            VIEW ALL
-          </Link>
-        </motion.div>
       </div>
     </section>
   );
