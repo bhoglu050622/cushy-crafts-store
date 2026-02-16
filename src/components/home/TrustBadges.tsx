@@ -1,23 +1,33 @@
 import { Truck, ShieldCheck, RotateCcw, CreditCard } from "lucide-react";
+import { motion } from "framer-motion";
 
 const badges = [
-  { icon: Truck, label: "Free Shipping", sub: "Orders ₹999+" },
-  { icon: ShieldCheck, label: "Quality Assured", sub: "100% Genuine" },
-  { icon: RotateCcw, label: "Easy Returns", sub: "7-Day Policy" },
-  { icon: CreditCard, label: "Secure Pay", sub: "UPI, Cards, COD" },
+  { icon: Truck, label: "Free Shipping", sub: "On orders above ₹999" },
+  { icon: ShieldCheck, label: "Artisan Quality", sub: "Handcrafted with care" },
+  { icon: RotateCcw, label: "Easy Returns", sub: "7-day hassle-free" },
+  { icon: CreditCard, label: "Secure Checkout", sub: "UPI, Cards & COD" },
 ];
 
 const TrustBadges = () => {
   return (
-    <section className="py-10 md:py-12 border-y border-border/50">
+    <section className="py-14 md:py-16 bg-foreground text-background">
       <div className="container">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-          {badges.map((badge) => (
-            <div key={badge.label} className="text-center">
-              <badge.icon className="h-6 w-6 text-foreground/60 mx-auto mb-3" strokeWidth={1.5} />
-              <p className="text-xs font-medium text-foreground tracking-wide">{badge.label}</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">{badge.sub}</p>
-            </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-10 md:gap-6">
+          {badges.map((badge, i) => (
+            <motion.div
+              key={badge.label}
+              initial={{ opacity: 0, y: 15 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: i * 0.1 }}
+              className="text-center group"
+            >
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full border border-background/15 mb-4 group-hover:border-background/30 transition-colors">
+                <badge.icon className="h-5 w-5 text-background/70" strokeWidth={1.5} />
+              </div>
+              <p className="text-xs font-medium tracking-wider uppercase text-background/90">{badge.label}</p>
+              <p className="text-[11px] text-background/45 mt-1">{badge.sub}</p>
+            </motion.div>
           ))}
         </div>
       </div>

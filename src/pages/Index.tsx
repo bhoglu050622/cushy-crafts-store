@@ -3,6 +3,8 @@ import HeroBanner from "@/components/home/HeroBanner";
 import CategoryShowcase from "@/components/home/CategoryShowcase";
 import FeaturedProducts from "@/components/home/FeaturedProducts";
 import TrustBadges from "@/components/home/TrustBadges";
+import StorySection from "@/components/home/StorySection";
+import NewsletterSection from "@/components/home/NewsletterSection";
 import PageMeta from "@/components/seo/PageMeta";
 
 const Index = () => {
@@ -24,7 +26,9 @@ const Index = () => {
       <HeroBanner />
       <TrustBadges />
       <CategoryShowcase />
+      <StorySection />
       <FeaturedProducts />
+      <NewsletterSection />
     </StoreLayout>
   );
 };
