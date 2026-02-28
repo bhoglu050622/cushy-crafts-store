@@ -1,4 +1,6 @@
-project_id = "unryliaiqdttpixikrsn"
+# Set this to your Supabase project ID (from Dashboard → Settings → General).
+# Run `node scripts/setup-new-supabase.js` after creating a new project to update this and .env.
+project_id = "rhxyvnqcrchwsjnukmjm"
 
 [functions.create-order]
 verify_jwt = false

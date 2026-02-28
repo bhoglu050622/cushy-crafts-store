@@ -64,6 +64,16 @@ This project is built with:
 
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
 
+## New Supabase project
+
+To create a **new** Supabase project and move schema, functions, storage, and config to it, see **[NEW_SUPABASE_SETUP.md](NEW_SUPABASE_SETUP.md)**. Use `node scripts/setup-new-supabase.js` to update `.env`, `supabase/config.toml`, and the proxy config in one go.
+
+**Migrate old data, import Excel products, and set up the proxy:** see **[MIGRATION_AND_IMPORT.md](MIGRATION_AND_IMPORT.md)** for running `npm run migrate:old-to-new`, `npm run import:products-excel`, and deploying the Supabase proxy.
+
+## Supabase and Jio (India) / blocked networks
+
+If your users are on a network that blocks Supabase (e.g. Jio in India), use the included **Supabase proxy** (Cloudflare Worker) so the app works without VPN or DNS changes. See **[supabase-proxy/README.md](supabase-proxy/README.md)** for deploy steps. After deploying, set `VITE_SUPABASE_URL` in your app to the Worker URL instead of the direct Supabase URL.
+
 ## Can I connect a custom domain to my Lovable project?
 
 Yes, you can!
