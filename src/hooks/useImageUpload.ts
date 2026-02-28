@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { storage } from "@/integrations/firebase/config";
+
+const BUCKET_PATH = "product-images";
 
 export const useImageUpload = () => {
   const [uploading, setUploading] = useState(false);
@@ -9,15 +12,10 @@ export const useImageUpload = () => {
     try {
       const ext = file.name.split(".").pop();
       const fileName = `${productId}/${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("product-images")
-        .upload(fileName, file, { cacheControl: "3600", upsert: false });
-
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage.from("product-images").getPublicUrl(fileName);
-      return data.publicUrl;
+      const storageRef = ref(storage, `${BUCKET_PATH}/${fileName}`);
+      await uploadBytes(storageRef, file, { cacheControl: "3600" });
+      const url = await getDownloadURL(storageRef);
+      return url;
     } catch (error) {
       console.error("Upload failed:", error);
       return null;

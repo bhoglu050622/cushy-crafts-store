@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, query, orderBy, getDocs, where, doc, updateDoc } from "firebase/firestore";
+import { db } from "@/integrations/firebase/config";
 import { formatPrice, formatDate } from "@/lib/formatters";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,19 +45,31 @@ const AdminOrders = () => {
   const { data: orders = [] } = useQuery({
     queryKey: ["admin-orders"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("*, order_items(*)")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
+      const ordersQuery = query(
+        collection(db, "orders"),
+        orderBy("created_at", "desc")
+      );
+      const ordersSnap = await getDocs(ordersQuery);
+      const ordersList = ordersSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const withItems = await Promise.all(
+        ordersList.map(async (order: Record<string, unknown>) => {
+          const itemsSnap = await getDocs(
+            query(
+              collection(db, "order_items"),
+              where("order_id", "==", order.id)
+            )
+          );
+          const order_items = itemsSnap.docs.map((di) => ({ id: di.id, ...di.data() }));
+          return { ...order, order_items };
+        })
+      );
+      return withItems;
     },
   });
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase.from("orders").update({ status: status as any }).eq("id", id);
-      if (error) throw error;
+      await updateDoc(doc(db, "orders", id), { status });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
@@ -66,8 +79,7 @@ const AdminOrders = () => {
 
   const updateFulfillmentMutation = useMutation({
     mutationFn: async ({ id, fulfillmentStatus }: { id: string; fulfillmentStatus: string }) => {
-      const { error } = await supabase.from("orders").update({ fulfillment_status: fulfillmentStatus }).eq("id", id);
-      if (error) throw error;
+      await updateDoc(doc(db, "orders", id), { fulfillment_status: fulfillmentStatus });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
@@ -78,12 +90,11 @@ const AdminOrders = () => {
   const saveTrackingMutation = useMutation({
     mutationFn: async () => {
       if (!trackingOrderId) return;
-      const { error } = await supabase.from("orders").update({
+      await updateDoc(doc(db, "orders", trackingOrderId), {
         tracking_number: trackingNumber || null,
         tracking_url: trackingUrl || null,
         fulfillment_status: "fulfilled",
-      }).eq("id", trackingOrderId);
-      if (error) throw error;
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
@@ -94,25 +105,25 @@ const AdminOrders = () => {
     },
   });
 
-  const filtered = orders.filter((o) => {
+  const filtered = orders.filter((o: Record<string, unknown>) => {
     if (statusFilter !== "all" && o.status !== statusFilter) return false;
     if (paymentFilter !== "all" && o.payment_status !== paymentFilter) return false;
-    if (fulfillmentFilter !== "all" && (o as any).fulfillment_status !== fulfillmentFilter) return false;
+    if (fulfillmentFilter !== "all" && o.fulfillment_status !== fulfillmentFilter) return false;
     return true;
   });
 
   const exportCSV = () => {
     const headers = ["Order #", "Date", "Customer", "Items", "Total", "Payment Method", "Payment Status", "Order Status", "Tracking #"];
-    const rows = filtered.map((o) => [
+    const rows = filtered.map((o: Record<string, unknown>) => [
       o.order_number,
-      formatDate(o.created_at || ""),
-      (o.shipping_address as any)?.full_name || "—",
-      o.order_items?.length || 0,
+      formatDate(String(o.created_at || "")),
+      (o.shipping_address as Record<string, unknown>)?.full_name || "—",
+      (o.order_items as unknown[])?.length || 0,
       Number(o.total_amount),
       o.payment_method || "—",
       o.payment_status || "—",
       o.status || "—",
-      (o as any).tracking_number || "—",
+      o.tracking_number || "—",
     ]);
     const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -133,7 +144,6 @@ const AdminOrders = () => {
         </Button>
       </div>
 
-      {/* Filters */}
       <div className="flex gap-3 mb-6 flex-wrap">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-36"><SelectValue placeholder="Order Status" /></SelectTrigger>
@@ -173,20 +183,20 @@ const AdminOrders = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((order) => (
-              <TableRow key={order.id}>
+            {filtered.map((order: Record<string, unknown>) => (
+              <TableRow key={String(order.id)}>
                 <TableCell className="font-medium text-sm">{order.order_number}</TableCell>
-                <TableCell className="text-sm">{formatDate(order.created_at || "")}</TableCell>
-                <TableCell className="text-sm">{order.order_items?.length || 0} items</TableCell>
+                <TableCell className="text-sm">{formatDate(String(order.created_at || ""))}</TableCell>
+                <TableCell className="text-sm">{(order.order_items as unknown[])?.length || 0} items</TableCell>
                 <TableCell className="text-sm">{formatPrice(Number(order.total_amount))}</TableCell>
                 <TableCell>
-                  <Badge variant="outline" className="capitalize text-xs">{order.payment_method || "—"}</Badge>
+                  <Badge variant="outline" className="capitalize text-xs">{String(order.payment_method || "—")}</Badge>
                 </TableCell>
                 <TableCell>
-                  <Select value={order.status || "pending"} onValueChange={(status) => updateStatusMutation.mutate({ id: order.id, status })}>
+                  <Select value={String(order.status || "pending")} onValueChange={(status) => updateStatusMutation.mutate({ id: String(order.id), status })}>
                     <SelectTrigger className="w-32 h-8">
-                      <Badge className={statusColors[order.status || "pending"]} variant="secondary">
-                        {(order.status || "pending").toUpperCase()}
+                      <Badge className={statusColors[String(order.status || "pending")]} variant="secondary">
+                        {String(order.status || "pending").toUpperCase()}
                       </Badge>
                     </SelectTrigger>
                     <SelectContent>
@@ -196,8 +206,8 @@ const AdminOrders = () => {
                 </TableCell>
                 <TableCell>
                   <Select
-                    value={(order as any).fulfillment_status || "unfulfilled"}
-                    onValueChange={(fs) => updateFulfillmentMutation.mutate({ id: order.id, fulfillmentStatus: fs })}
+                    value={String(order.fulfillment_status || "unfulfilled")}
+                    onValueChange={(fs) => updateFulfillmentMutation.mutate({ id: String(order.id), fulfillmentStatus: fs })}
                   >
                     <SelectTrigger className="w-36 h-8 text-xs">
                       <SelectValue />
@@ -212,9 +222,9 @@ const AdminOrders = () => {
                     variant="ghost"
                     size="sm"
                     onClick={() => {
-                      setTrackingOrderId(order.id);
-                      setTrackingNumber((order as any).tracking_number || "");
-                      setTrackingUrl((order as any).tracking_url || "");
+                      setTrackingOrderId(String(order.id));
+                      setTrackingNumber(String(order.tracking_number || ""));
+                      setTrackingUrl(String(order.tracking_url || ""));
                     }}
                   >
                     <Truck className="h-4 w-4" />
@@ -226,7 +236,6 @@ const AdminOrders = () => {
         </Table>
       </div>
 
-      {/* Tracking Dialog */}
       <Dialog open={!!trackingOrderId} onOpenChange={() => setTrackingOrderId(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Add Tracking Info</DialogTitle></DialogHeader>

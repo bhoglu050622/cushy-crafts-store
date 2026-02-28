@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, query, limit, getDocs, doc, getDoc, setDoc, updateDoc, orderBy } from "firebase/firestore";
+import { db } from "@/integrations/firebase/config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 
+const GST_DOC_ID = "default";
+
 const AdminSettings = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -16,18 +19,19 @@ const AdminSettings = () => {
   const { data: gstSettings } = useQuery({
     queryKey: ["gst-settings"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("gst_settings").select("*").limit(1).maybeSingle();
-      if (error) throw error;
-      return data;
+      const ref = doc(db, "gst_settings", GST_DOC_ID);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) return null;
+      return { id: snap.id, ...snap.data() };
     },
   });
 
   const { data: shippingRules = [] } = useQuery({
     queryKey: ["shipping-rules"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("shipping_rules").select("*").order("created_at");
-      if (error) throw error;
-      return data;
+      const q = query(collection(db, "shipping_rules"), orderBy("created_at"));
+      const snap = await getDocs(q);
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     },
   });
 
@@ -44,33 +48,34 @@ const AdminSettings = () => {
   useEffect(() => {
     if (gstSettings) {
       setGstForm({
-        business_name: gstSettings.business_name || "",
-        gstin: gstSettings.gstin || "",
+        business_name: (gstSettings.business_name as string) || "",
+        gstin: (gstSettings.gstin as string) || "",
         default_gst_rate: String(gstSettings.default_gst_rate || 18),
-        business_state: gstSettings.business_state || "",
-        business_address: gstSettings.business_address || "",
-        invoice_prefix: gstSettings.invoice_prefix || "INV",
-        is_gst_inclusive: gstSettings.is_gst_inclusive || false,
+        business_state: (gstSettings.business_state as string) || "",
+        business_address: (gstSettings.business_address as string) || "",
+        invoice_prefix: (gstSettings.invoice_prefix as string) || "INV",
+        is_gst_inclusive: Boolean(gstSettings.is_gst_inclusive),
       });
     }
   }, [gstSettings]);
 
   const updateGstMutation = useMutation({
     mutationFn: async () => {
+      const payload = {
+        business_name: gstForm.business_name,
+        gstin: gstForm.gstin,
+        default_gst_rate: Number(gstForm.default_gst_rate),
+        business_state: gstForm.business_state,
+        business_address: gstForm.business_address,
+        invoice_prefix: gstForm.invoice_prefix,
+        is_gst_inclusive: gstForm.is_gst_inclusive,
+        updated_at: new Date().toISOString(),
+      };
+      const ref = doc(db, "gst_settings", GST_DOC_ID);
       if (gstSettings?.id) {
-        const { error } = await supabase
-          .from("gst_settings")
-          .update({
-            business_name: gstForm.business_name,
-            gstin: gstForm.gstin,
-            default_gst_rate: Number(gstForm.default_gst_rate),
-            business_state: gstForm.business_state,
-            business_address: gstForm.business_address,
-            invoice_prefix: gstForm.invoice_prefix,
-            is_gst_inclusive: gstForm.is_gst_inclusive,
-          })
-          .eq("id", gstSettings.id);
-        if (error) throw error;
+        await updateDoc(ref, payload);
+      } else {
+        await setDoc(ref, { ...payload, created_at: payload.updated_at });
       }
     },
     onSuccess: () => {
@@ -84,7 +89,6 @@ const AdminSettings = () => {
       <h1 className="text-2xl font-display mb-6">Settings</h1>
 
       <div className="space-y-6 max-w-2xl">
-        {/* GST Settings */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg font-display">GST Configuration</CardTitle>
@@ -128,15 +132,14 @@ const AdminSettings = () => {
           </CardContent>
         </Card>
 
-        {/* Shipping Rules */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg font-display">Shipping Rules</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {shippingRules.map((rule) => (
-                <div key={rule.id} className="flex items-center justify-between p-3 bg-muted/50 rounded">
+              {shippingRules.map((rule: Record<string, unknown>) => (
+                <div key={String(rule.id)} className="flex items-center justify-between p-3 bg-muted/50 rounded">
                   <div>
                     <p className="text-sm font-medium">{rule.name}</p>
                     <p className="text-xs text-foreground/50">

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, query, orderBy, getDocs, doc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { db } from "@/integrations/firebase/config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +24,7 @@ const AdminCollections = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<any>(null);
+  const [editing, setEditing] = useState<Record<string, unknown> | null>(null);
   const [form, setForm] = useState({
     title: "", slug: "", description: "", type: "manual", rules: "", is_active: true,
   });
@@ -31,9 +32,9 @@ const AdminCollections = () => {
   const { data: collections = [] } = useQuery({
     queryKey: ["admin-collections"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("collections").select("*").order("sort_order");
-      if (error) throw error;
-      return data;
+      const q = query(collection(db, "collections"), orderBy("sort_order"));
+      const snap = await getDocs(q);
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     },
   });
 
@@ -46,13 +47,14 @@ const AdminCollections = () => {
         type: form.type,
         rules: form.type === "automatic" && form.rules ? JSON.parse(form.rules) : null,
         is_active: form.is_active,
+        sort_order: editing ? (editing.sort_order as number) ?? 0 : collections.length,
+        updated_at: new Date().toISOString(),
       };
       if (editing) {
-        const { error } = await supabase.from("collections").update(payload).eq("id", editing.id);
-        if (error) throw error;
+        await updateDoc(doc(db, "collections", String(editing.id)), payload);
       } else {
-        const { error } = await supabase.from("collections").insert(payload);
-        if (error) throw error;
+        const ref = doc(collection(db, "collections"));
+        await setDoc(ref, { ...payload, created_at: payload.updated_at });
       }
     },
     onSuccess: () => {
@@ -65,8 +67,7 @@ const AdminCollections = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("collections").delete().eq("id", id);
-      if (error) throw error;
+      await deleteDoc(doc(db, "collections", id));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-collections"] });
@@ -80,12 +81,15 @@ const AdminCollections = () => {
     setIsDialogOpen(true);
   };
 
-  const openEdit = (c: any) => {
+  const openEdit = (c: Record<string, unknown>) => {
     setEditing(c);
     setForm({
-      title: c.title, slug: c.slug, description: c.description || "",
-      type: c.type, rules: c.rules ? JSON.stringify(c.rules, null, 2) : "",
-      is_active: c.is_active,
+      title: String(c.title),
+      slug: String(c.slug),
+      description: String(c.description || ""),
+      type: String(c.type),
+      rules: c.rules ? JSON.stringify(c.rules, null, 2) : "",
+      is_active: Boolean(c.is_active),
     });
     setIsDialogOpen(true);
   };
@@ -108,15 +112,15 @@ const AdminCollections = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {collections.map((c: any) => (
-              <TableRow key={c.id}>
+            {collections.map((c: Record<string, unknown>) => (
+              <TableRow key={String(c.id)}>
                 <TableCell className="font-medium">{c.title}</TableCell>
-                <TableCell><Badge variant="outline">{c.type}</Badge></TableCell>
+                <TableCell><Badge variant="outline">{String(c.type)}</Badge></TableCell>
                 <TableCell><Badge variant={c.is_active ? "default" : "secondary"}>{c.is_active ? "Active" : "Inactive"}</Badge></TableCell>
                 <TableCell>
                   <div className="flex gap-1">
                     <button onClick={() => openEdit(c)} className="p-2 hover:bg-muted rounded"><Edit2 className="h-4 w-4" /></button>
-                    <button onClick={() => deleteMutation.mutate(c.id)} className="p-2 hover:bg-muted rounded text-destructive"><Trash2 className="h-4 w-4" /></button>
+                    <button onClick={() => deleteMutation.mutate(String(c.id))} className="p-2 hover:bg-muted rounded text-destructive"><Trash2 className="h-4 w-4" /></button>
                   </div>
                 </TableCell>
               </TableRow>

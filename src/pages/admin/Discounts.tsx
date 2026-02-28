@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, query, orderBy, getDocs, doc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { db } from "@/integrations/firebase/config";
 import { formatPrice, formatDate } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +24,7 @@ const AdminDiscounts = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<any>(null);
+  const [editing, setEditing] = useState<{ id: string; [k: string]: unknown } | null>(null);
   const [form, setForm] = useState({
     code: "", type: "percentage", value: "", min_cart_value: "", max_uses: "", expires_at: "", is_active: true,
   });
@@ -31,9 +32,12 @@ const AdminDiscounts = () => {
   const { data: discounts = [] } = useQuery({
     queryKey: ["admin-discounts"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("discounts").select("*").order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
+      const q = query(
+        collection(db, "discounts"),
+        orderBy("created_at", "desc")
+      );
+      const snap = await getDocs(q);
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     },
   });
 
@@ -47,13 +51,13 @@ const AdminDiscounts = () => {
         max_uses: form.max_uses ? Number(form.max_uses) : null,
         expires_at: form.expires_at || null,
         is_active: form.is_active,
+        updated_at: new Date().toISOString(),
       };
       if (editing) {
-        const { error } = await supabase.from("discounts").update(payload).eq("id", editing.id);
-        if (error) throw error;
+        await updateDoc(doc(db, "discounts", editing.id), payload);
       } else {
-        const { error } = await supabase.from("discounts").insert(payload);
-        if (error) throw error;
+        const ref = doc(collection(db, "discounts"));
+        await setDoc(ref, { ...payload, created_at: payload.updated_at, usage_count: 0 });
       }
     },
     onSuccess: () => {
@@ -66,8 +70,7 @@ const AdminDiscounts = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("discounts").delete().eq("id", id);
-      if (error) throw error;
+      await deleteDoc(doc(db, "discounts", id));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-discounts"] });
@@ -77,8 +80,7 @@ const AdminDiscounts = () => {
 
   const toggleActive = useMutation({
     mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
-      const { error } = await supabase.from("discounts").update({ is_active: active }).eq("id", id);
-      if (error) throw error;
+      await updateDoc(doc(db, "discounts", id), { is_active: active });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-discounts"] }),
   });
@@ -89,14 +91,16 @@ const AdminDiscounts = () => {
     setIsDialogOpen(true);
   };
 
-  const openEdit = (d: any) => {
-    setEditing(d);
+  const openEdit = (d: Record<string, unknown>) => {
+    setEditing(d as { id: string; [k: string]: unknown });
     setForm({
-      code: d.code, type: d.type, value: String(d.value),
+      code: String(d.code),
+      type: String(d.type),
+      value: String(d.value),
       min_cart_value: d.min_cart_value ? String(d.min_cart_value) : "",
       max_uses: d.max_uses ? String(d.max_uses) : "",
-      expires_at: d.expires_at ? d.expires_at.slice(0, 10) : "",
-      is_active: d.is_active,
+      expires_at: d.expires_at ? String(d.expires_at).slice(0, 10) : "",
+      is_active: Boolean(d.is_active),
     });
     setIsDialogOpen(true);
   };
@@ -123,21 +127,21 @@ const AdminDiscounts = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {discounts.map((d: any) => (
-              <TableRow key={d.id}>
+            {discounts.map((d: Record<string, unknown>) => (
+              <TableRow key={String(d.id)}>
                 <TableCell className="font-mono font-medium">{d.code}</TableCell>
-                <TableCell><Badge variant="outline">{d.type}</Badge></TableCell>
+                <TableCell><Badge variant="outline">{String(d.type)}</Badge></TableCell>
                 <TableCell>{d.type === "percentage" ? `${d.value}%` : formatPrice(Number(d.value))}</TableCell>
                 <TableCell>{d.min_cart_value ? formatPrice(Number(d.min_cart_value)) : "—"}</TableCell>
                 <TableCell>{d.usage_count}{d.max_uses ? `/${d.max_uses}` : ""}</TableCell>
-                <TableCell>{d.expires_at ? formatDate(d.expires_at) : "—"}</TableCell>
+                <TableCell>{d.expires_at ? formatDate(String(d.expires_at)) : "—"}</TableCell>
                 <TableCell>
-                  <Switch checked={d.is_active} onCheckedChange={(v) => toggleActive.mutate({ id: d.id, active: v })} />
+                  <Switch checked={Boolean(d.is_active)} onCheckedChange={(v) => toggleActive.mutate({ id: String(d.id), active: v })} />
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-1">
                     <button onClick={() => openEdit(d)} className="p-2 hover:bg-muted rounded"><Edit2 className="h-4 w-4" /></button>
-                    <button onClick={() => deleteMutation.mutate(d.id)} className="p-2 hover:bg-muted rounded text-destructive"><Trash2 className="h-4 w-4" /></button>
+                    <button onClick={() => deleteMutation.mutate(String(d.id))} className="p-2 hover:bg-muted rounded text-destructive"><Trash2 className="h-4 w-4" /></button>
                   </div>
                 </TableCell>
               </TableRow>

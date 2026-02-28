@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Import products from product_upload_template (1) (1).xlsx into the linked Supabase project.
- * Uses .env: VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY (or SUPABASE_SERVICE_ROLE_KEY for RLS bypass).
+ * Import products from product_upload_template (1) (1).xlsx into Firestore.
+ * Uses .env: VITE_FIREBASE_PROJECT_ID (and GOOGLE_APPLICATION_CREDENTIALS for service account if needed).
  *
  * Run: node scripts/import-products-from-excel.js
  * Optional: EXCEL_PATH=path/to/file.xlsx node scripts/import-products-from-excel.js
@@ -9,7 +9,6 @@
 
 import dotenv from "dotenv";
 import XLSX from "xlsx";
-import { createClient } from "@supabase/supabase-js";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
@@ -17,29 +16,29 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 dotenv.config({ path: path.join(ROOT, ".env") });
+
 const excelPath =
   process.env.EXCEL_PATH ||
   path.join(ROOT, "product_upload_template (1) (1).xlsx");
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  console.error("Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (or SUPABASE_SERVICE_ROLE_KEY) in .env");
-  process.exit(1);
-}
-if (!process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY === "") {
-  console.error("SUPABASE_SERVICE_ROLE_KEY is required (bypasses RLS). Get it from Supabase Dashboard → Project → Settings → API → service_role key, then add to .env");
-  process.exit(1);
+async function getFirestore() {
+  const projectId = process.env.VITE_FIREBASE_PROJECT_ID || process.env.GCLOUD_PROJECT;
+  if (!projectId) {
+    console.error("Set VITE_FIREBASE_PROJECT_ID or GCLOUD_PROJECT in .env");
+    process.exit(1);
+  }
+  const { initializeApp, getApps } = await import("firebase-admin/app");
+  const { getFirestore } = await import("firebase-admin/firestore");
+  if (!getApps().length) {
+    initializeApp({ projectId });
+  }
+  return getFirestore();
 }
 
 if (!fs.existsSync(excelPath)) {
   console.error("Excel file not found:", excelPath);
   process.exit(1);
 }
-
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 function slugify(text) {
   return (text || "")
@@ -66,6 +65,8 @@ function parseBool(v) {
 }
 
 async function main() {
+  const db = await getFirestore();
+
   const wb = XLSX.readFile(excelPath);
   const sheetName = wb.SheetNames.find((n) => /product/i.test(n)) || wb.SheetNames[0];
   const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: "" });
@@ -75,19 +76,14 @@ async function main() {
     return;
   }
 
-  const { data: categories, error: catErr } = await supabase
-    .from("categories")
-    .select("id, name, slug");
-  if (catErr) {
-    console.error("Failed to fetch categories:", catErr);
-    process.exit(1);
-  }
+  const categoriesSnap = await db.collection("categories").get();
   const categoryByKey = new Map();
-  for (const c of categories || []) {
-    const key = c.name.toLowerCase().trim();
-    categoryByKey.set(key, c.id);
-    categoryByKey.set((c.slug || "").toLowerCase(), c.id);
-  }
+  categoriesSnap.docs.forEach((d) => {
+    const c = d.data();
+    const key = (c.name || "").toLowerCase().trim();
+    categoryByKey.set(key, d.id);
+    categoryByKey.set((c.slug || "").toLowerCase(), d.id);
+  });
   categoryByKey.set("curtain", categoryByKey.get("curtains") || null);
 
   let created = 0;
@@ -115,11 +111,12 @@ async function main() {
     const color = (r.color || "").toString().trim() || null;
     const size = (r.size || "").toString().trim() || null;
 
+    const now = new Date().toISOString();
     const productPayload = {
       name,
       slug,
       category_id: categoryId,
-      design_name: (r.design_name || r.design_name || "").toString().trim() || null,
+      design_name: (r.design_name || "").toString().trim() || null,
       base_price: basePrice,
       compare_at_price: compareAtPrice,
       description: (r.description || "").toString().trim() || null,
@@ -128,24 +125,16 @@ async function main() {
       dimensions: (r.dimensions || "").toString().trim() || null,
       care_instructions: (r.care_instructions || "").toString().trim() || null,
       tags: Array.isArray(r.tags) ? r.tags : (r.tags ? String(r.tags).split(/[,;]/).map((t) => t.trim()).filter(Boolean) : null),
-      is_featured: parseBool(r.featured ?? r.featured),
-      is_active: parseBool(r.active ?? r.active),
+      is_featured: parseBool(r.featured),
+      is_active: parseBool(r.active),
+      created_at: now,
+      updated_at: now,
     };
 
-    const { data: product, error: productError } = await supabase
-      .from("products")
-      .insert(productPayload)
-      .select("id")
-      .single();
-
-    if (productError) {
-      console.error("Row", i + 1, "product insert error:", productError.message);
-      errors++;
-      continue;
-    }
+    const productRef = await db.collection("products").add(productPayload);
 
     const variantPayload = {
-      product_id: product.id,
+      product_id: productRef.id,
       sku,
       color,
       size,
@@ -153,18 +142,10 @@ async function main() {
       compare_at_price: compareAtPrice,
       stock_quantity: stock,
       is_active: true,
+      created_at: now,
+      updated_at: now,
     };
-    const { data: variant, error: variantError } = await supabase
-      .from("product_variants")
-      .insert(variantPayload)
-      .select("id")
-      .single();
-
-    if (variantError) {
-      console.error("Row", i + 1, "variant insert error:", variantError.message);
-      errors++;
-      continue;
-    }
+    const variantRef = await db.collection("product_variants").add(variantPayload);
 
     const imageUrls = [];
     for (let j = 1; j <= 8; j++) {
@@ -172,16 +153,19 @@ async function main() {
       if (url && url.startsWith("http")) imageUrls.push(url);
     }
     if (imageUrls.length) {
-      const imageRows = imageUrls.map((url, idx) => ({
-        product_id: product.id,
-        variant_id: variant.id,
-        url,
-        alt_text: `${name} - image ${idx + 1}`,
-        sort_order: idx,
-        is_primary: idx === 0,
-      }));
-      const { error: imgError } = await supabase.from("product_images").insert(imageRows);
-      if (imgError) console.error("Row", i + 1, "images insert error:", imgError.message);
+      const batch = db.batch();
+      imageUrls.forEach((url, idx) => {
+        const imgRef = db.collection("product_images").doc();
+        batch.set(imgRef, {
+          product_id: productRef.id,
+          variant_id: variantRef.id,
+          url,
+          alt_text: `${name} - image ${idx + 1}`,
+          sort_order: idx,
+          is_primary: idx === 0,
+        });
+      });
+      await batch.commit();
     }
 
     created++;

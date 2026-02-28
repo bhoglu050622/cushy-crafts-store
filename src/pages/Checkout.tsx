@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import StoreLayout from "@/components/layout/StoreLayout";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { functions, httpsCallable } from "@/integrations/firebase/config";
 import { formatPrice } from "@/lib/formatters";
 import { addressSchema, type AddressFormValues, indianStates } from "@/lib/validators";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -64,23 +64,21 @@ const Checkout = () => {
     setDiscountError("");
 
     try {
-      const { data, error } = await supabase.functions.invoke("validate-discount", {
-        body: { code: discountCode.trim(), cartTotal: subtotal },
-      });
+      const validateDiscountFn = httpsCallable<{ code: string; cartTotal: number }, { valid: boolean; error?: string; code?: string; discountAmount?: number; type?: string; value?: number }>(functions, "validateDiscount");
+      const { data } = await validateDiscountFn({ code: discountCode.trim(), cartTotal: subtotal });
 
-      if (error) throw error;
       if (!data.valid) {
         setDiscountError(data.error || "Invalid code");
         return;
       }
 
       setAppliedDiscount({
-        code: data.code,
-        amount: data.discountAmount,
-        type: data.type,
-        value: data.value,
+        code: data.code!,
+        amount: data.discountAmount!,
+        type: data.type!,
+        value: data.value!,
       });
-      toast({ title: "Discount applied!", description: `You save ${formatPrice(data.discountAmount)}` });
+      toast({ title: "Discount applied!", description: `You save ${formatPrice(data.discountAmount!)}` });
     } catch {
       setDiscountError("Failed to validate code");
     } finally {
@@ -114,29 +112,28 @@ const Checkout = () => {
         pincode: addressData.pincode,
       };
 
-      const { data, error } = await supabase.functions.invoke("create-order", {
-        body: {
-          items: items.map((i) => ({
-            variantId: i.variantId,
-            productId: i.productId,
-            quantity: i.quantity,
-          })),
-          shippingAddress,
-          paymentMethod,
-          discountCode: appliedDiscount?.code || undefined,
-        },
+      const createOrderFn = httpsCallable<
+        { items: { variantId: string; productId: string; quantity: number }[]; shippingAddress: object; paymentMethod: string; discountCode?: string },
+        { orderId: string; orderNumber: string; totalAmount: number; discountAmount: number }
+      >(functions, "createOrder");
+      const { data } = await createOrderFn({
+        items: items.map((i) => ({
+          variantId: i.variantId,
+          productId: i.productId,
+          quantity: i.quantity,
+        })),
+        shippingAddress,
+        paymentMethod,
+        discountCode: appliedDiscount?.code || undefined,
       });
-
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
 
       clearCart();
       toast({ title: "Order placed successfully!", description: `Order #${data.orderNumber}` });
       navigate(`/order-confirmation/${data.orderNumber}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Failed to place order",
-        description: error.message || "Please try again",
+        description: error instanceof Error ? error.message : "Please try again",
         variant: "destructive",
       });
     } finally {

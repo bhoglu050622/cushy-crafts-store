@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, query, where, orderBy, getDocs, doc, deleteDoc } from "firebase/firestore";
+import { db } from "@/integrations/firebase/config";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { MapPin, Trash2, Plus } from "lucide-react";
@@ -11,24 +12,22 @@ const AccountAddresses = () => {
   const queryClient = useQueryClient();
 
   const { data: addresses = [], isLoading } = useQuery({
-    queryKey: ["my-addresses", user?.id],
+    queryKey: ["my-addresses", user?.uid],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("addresses")
-        .select("*")
-        .eq("user_id", user!.id)
-        .order("is_default", { ascending: false });
-
-      if (error) throw error;
-      return data;
+      const q = query(
+        collection(db, "addresses"),
+        where("user_id", "==", user!.uid),
+        orderBy("is_default", "desc")
+      );
+      const snap = await getDocs(q);
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     },
-    enabled: !!user?.id,
+    enabled: !!user?.uid,
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("addresses").delete().eq("id", id);
-      if (error) throw error;
+      await deleteDoc(doc(db, "addresses", id));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-addresses"] });
@@ -51,20 +50,20 @@ const AccountAddresses = () => {
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">
-          {addresses.map((address) => (
-            <div key={address.id} className="border border-border/30 rounded-md p-4 relative">
+          {addresses.map((address: Record<string, unknown>) => (
+            <div key={String(address.id)} className="border border-border/30 rounded-md p-4 relative">
               {address.is_default && (
                 <span className="text-[10px] tracking-widest text-foreground/50 uppercase">Default</span>
               )}
               <p className="font-medium text-sm">{address.full_name}</p>
               <p className="text-sm text-foreground/70">{address.address_line1}</p>
-              {address.address_line2 && <p className="text-sm text-foreground/70">{address.address_line2}</p>}
+              {address.address_line2 && <p className="text-sm text-foreground/70">{String(address.address_line2)}</p>}
               <p className="text-sm text-foreground/70">
                 {address.city}, {address.state} - {address.pincode}
               </p>
               <p className="text-sm text-foreground/70">{address.phone}</p>
               <button
-                onClick={() => deleteMutation.mutate(address.id)}
+                onClick={() => deleteMutation.mutate(String(address.id))}
                 className="absolute top-4 right-4 text-foreground/30 hover:text-destructive"
               >
                 <Trash2 className="h-4 w-4" />

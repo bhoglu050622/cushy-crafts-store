@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { db } from "@/integrations/firebase/config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,15 +28,16 @@ const BulkTagUpdate = ({ open, onOpenChange, selectedProductIds }: Props) => {
       if (tagList.length === 0) throw new Error("Enter at least one tag");
 
       for (const id of selectedProductIds) {
+        const ref = doc(db, "products", id);
         if (action === "replace") {
-          await supabase.from("products").update({ tags: tagList }).eq("id", id);
+          await updateDoc(ref, { tags: tagList, updated_at: new Date().toISOString() });
         } else {
-          const { data: product } = await supabase.from("products").select("tags").eq("id", id).single();
-          const existing = (product?.tags as string[]) || [];
+          const snap = await getDoc(ref);
+          const existing = (snap.data()?.tags as string[]) || [];
           const updated = action === "add"
             ? Array.from(new Set([...existing, ...tagList]))
             : existing.filter((t) => !tagList.includes(t));
-          await supabase.from("products").update({ tags: updated }).eq("id", id);
+          await updateDoc(ref, { tags: updated, updated_at: new Date().toISOString() });
         }
       }
     },
@@ -45,7 +47,7 @@ const BulkTagUpdate = ({ open, onOpenChange, selectedProductIds }: Props) => {
       onOpenChange(false);
       setTags("");
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   return (
@@ -58,7 +60,7 @@ const BulkTagUpdate = ({ open, onOpenChange, selectedProductIds }: Props) => {
         <form onSubmit={(e) => { e.preventDefault(); mutation.mutate(); }} className="space-y-4">
           <div>
             <Label>Action</Label>
-            <Select value={action} onValueChange={(v) => setAction(v as any)}>
+            <Select value={action} onValueChange={(v) => setAction(v as "add" | "remove" | "replace")}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="add">Add tags</SelectItem>

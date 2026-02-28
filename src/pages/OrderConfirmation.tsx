@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "@/integrations/firebase/config";
 import StoreLayout from "@/components/layout/StoreLayout";
 import { formatPrice, formatDate } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
@@ -12,14 +13,18 @@ const OrderConfirmation = () => {
   const { data: order } = useQuery({
     queryKey: ["order", orderNumber],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("*, order_items(*)")
-        .eq("order_number", orderNumber || "")
-        .maybeSingle();
-
-      if (error) throw error;
-      return data;
+      if (!orderNumber) return null;
+      const ordersSnap = await getDocs(
+        query(collection(db, "orders"), where("order_number", "==", orderNumber))
+      );
+      if (ordersSnap.empty) return null;
+      const orderDoc = ordersSnap.docs[0];
+      const orderData = { id: orderDoc.id, ...orderDoc.data() };
+      const itemsSnap = await getDocs(
+        query(collection(db, "order_items"), where("order_id", "==", orderDoc.id))
+      );
+      const order_items = itemsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      return { ...orderData, order_items };
     },
     enabled: !!orderNumber,
   });
@@ -39,18 +44,17 @@ const OrderConfirmation = () => {
             <div className="border border-border/30 rounded-md p-6 text-left mb-8 space-y-4">
               <div className="flex justify-between text-sm">
                 <span className="text-foreground/60">Date</span>
-                <span>{formatDate(order.created_at || new Date().toISOString())}</span>
+                <span>{formatDate(String(order.created_at || new Date().toISOString()))}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-foreground/60">Payment</span>
-                <span className="capitalize">{order.payment_method === "cod" ? "Cash on Delivery" : order.payment_method}</span>
+                <span className="capitalize">{order.payment_method === "cod" ? "Cash on Delivery" : String(order.payment_method)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-foreground/60">Total</span>
                 <span className="font-medium">{formatPrice(Number(order.total_amount))}</span>
               </div>
-              
-              {/* Status Timeline */}
+
               <div className="border-t border-border/30 pt-4">
                 <h3 className="text-xs tracking-widest text-foreground/70 mb-4">ORDER STATUS</h3>
                 <div className="flex items-center justify-between">

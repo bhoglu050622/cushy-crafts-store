@@ -1,12 +1,13 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { User, Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
-
-type UserRole = "admin" | "staff" | "customer";
+import type { User as FirebaseUser } from "firebase/auth";
+import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut } from "firebase/auth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { auth, db } from "@/integrations/firebase/config";
+import type { UserRole } from "@/types/firestore";
 
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
+  user: FirebaseUser | null;
+  session: { user: FirebaseUser } | null;
   loading: boolean;
   roleLoading: boolean;
   userRole: UserRole | null;
@@ -19,94 +20,90 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [session, setSession] = useState<{ user: FirebaseUser } | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [roleLoading, setRoleLoading] = useState(false);
 
-  const fetchUserRole = async (userId: string) => {
-    setRoleLoading(true);
-    const { data, error } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .single();
-
-    if (data && !error) {
-      setUserRole(data.role as UserRole);
-    } else {
-      setUserRole("customer");
+  const ensureProfileAndRole = async (uid: string, displayName?: string | null) => {
+    const now = new Date().toISOString();
+    const profileRef = doc(db, "profiles", uid);
+    const roleRef = doc(db, "user_roles", uid);
+    const [profileSnap, roleSnap] = await Promise.all([getDoc(profileRef), getDoc(roleRef)]);
+    if (!profileSnap.exists()) {
+      await setDoc(profileRef, {
+        user_id: uid,
+        full_name: displayName ?? null,
+        phone: null,
+        avatar_url: null,
+        created_at: now,
+        updated_at: now,
+      });
     }
-    setRoleLoading(false);
+    if (!roleSnap.exists()) {
+      await setDoc(roleRef, { user_id: uid, role: "customer" });
+    }
+  };
+
+  const fetchUserRole = async (uid: string): Promise<UserRole> => {
+    const roleRef = doc(db, "user_roles", uid);
+    const snap = await getDoc(roleRef);
+    if (snap.exists() && snap.data()?.role) {
+      return snap.data().role as UserRole;
+    }
+    return "customer";
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          // Set roleLoading synchronously before deferring fetch
-          setRoleLoading(true);
-          setTimeout(() => {
-            fetchUserRole(session.user.id);
-          }, 0);
-        } else {
-          setUserRole(null);
-          setRoleLoading(false);
-        }
-        setLoading(false);
-      }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await fetchUserRole(session.user.id);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser);
+      setSession(firebaseUser ? { user: firebaseUser } : null);
+      if (firebaseUser) {
+        setRoleLoading(true);
+        await ensureProfileAndRole(firebaseUser.uid, firebaseUser.displayName);
+        const role = await fetchUserRole(firebaseUser.uid);
+        setUserRole(role);
+        setRoleLoading(false);
+      } else {
+        setUserRole(null);
+        setRoleLoading(false);
       }
       setLoading(false);
     });
-
-    return () => subscription.unsubscribe();
+    return () => unsubscribe();
   }, []);
 
   const signUp = async (email: string, password: string, fullName?: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          full_name: fullName,
-        },
-      },
-    });
-
-    return { error: error as Error | null };
+    try {
+      const { user: newUser } = await createUserWithEmailAndPassword(auth, email, password);
+      await ensureProfileAndRole(newUser.uid, fullName ?? newUser.displayName);
+      const role = await fetchUserRole(newUser.uid);
+      setUserRole(role);
+      return { error: null };
+    } catch (err) {
+      return { error: err instanceof Error ? err : new Error(String(err)) };
+    }
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    return { error: error as Error | null };
+    try {
+      const { user: signedInUser } = await signInWithEmailAndPassword(auth, email, password);
+      await ensureProfileAndRole(signedInUser.uid, signedInUser.displayName);
+      const role = await fetchUserRole(signedInUser.uid);
+      setUserRole(role);
+      return { error: null };
+    } catch (err) {
+      return { error: err instanceof Error ? err : new Error(String(err)) };
+    }
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await fbSignOut(auth);
     setUserRole(null);
   };
 
-  const value = {
+  const value: AuthContextType = {
     user,
     session,
     loading,

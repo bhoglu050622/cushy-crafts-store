@@ -1,6 +1,19 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  collection,
+  query,
+  orderBy,
+  getDocs,
+  where,
+  doc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  addDoc,
+} from "firebase/firestore";
+import { db } from "@/integrations/firebase/config";
+import { functions, httpsCallable } from "@/integrations/firebase/config";
 import { formatPrice } from "@/lib/formatters";
 import { useCategories } from "@/hooks/useProducts";
 import { useImageUpload } from "@/hooks/useImageUpload";
@@ -40,9 +53,8 @@ const AdminProducts = () => {
   const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [editingProduct, setEditingProduct] = useState<Record<string, unknown> | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
   const [variants, setVariants] = useState<VariantForm[]>([]);
   const csvInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -62,21 +74,52 @@ const AdminProducts = () => {
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["admin-products"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*, categories!products_category_id_fkey(name), product_variants(id, sku, stock_quantity, price, color, size)")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
+      const productsSnap = await getDocs(
+        query(collection(db, "products"), orderBy("created_at", "desc"))
+      );
+      const productIds = productsSnap.docs.map((d) => d.id);
+      const [variantsSnap, categoriesSnap] = await Promise.all([
+        productIds.length > 0
+          ? getDocs(
+              query(
+                collection(db, "product_variants"),
+                where("product_id", "in", productIds.slice(0, 30))
+              )
+            )
+          : Promise.resolve({ docs: [] }),
+        getDocs(collection(db, "categories")),
+      ]);
+      const categoryMap = new Map(categoriesSnap.docs.map((d) => [d.id, { name: d.data().name }]));
+      const variantsByProduct = new Map<string, Record<string, unknown>[]>();
+      variantsSnap.docs.forEach((d) => {
+        const v = { id: d.id, ...d.data() };
+        const pid = v.product_id as string;
+        if (!variantsByProduct.has(pid)) variantsByProduct.set(pid, []);
+        variantsByProduct.get(pid)!.push(v);
+      });
+      return productsSnap.docs.map((d) => {
+        const p = d.data();
+        return {
+          id: d.id,
+          ...p,
+          categories: p.category_id ? categoryMap.get(p.category_id) : null,
+          product_variants: variantsByProduct.get(d.id) || [],
+        };
+      });
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await supabase.from("product_images").delete().eq("product_id", id);
-      await supabase.from("product_variants").delete().eq("product_id", id);
-      const { error } = await supabase.from("products").delete().eq("id", id);
-      if (error) throw error;
+      const [imagesSnap, variantsSnap] = await Promise.all([
+        getDocs(query(collection(db, "product_images"), where("product_id", "==", id))),
+        getDocs(query(collection(db, "product_variants"), where("product_id", "==", id))),
+      ]);
+      await Promise.all([
+        ...imagesSnap.docs.map((d) => deleteDoc(d.ref)),
+        ...variantsSnap.docs.map((d) => deleteDoc(d.ref)),
+      ]);
+      await deleteDoc(doc(db, "products", id));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-products"] });
@@ -85,7 +128,8 @@ const AdminProducts = () => {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: Record<string, unknown>) => {
+      const now = new Date().toISOString();
       const productPayload = {
         name: data.name,
         slug: data.slug,
@@ -98,24 +142,23 @@ const AdminProducts = () => {
         fabric: data.fabric || null,
         dimensions: data.dimensions || null,
         care_instructions: data.care_instructions || null,
-        tags: data.tags ? data.tags.split(",").map((t: string) => t.trim()).filter(Boolean) : null,
+        tags: data.tags ? String(data.tags).split(",").map((t: string) => t.trim()).filter(Boolean) : null,
         is_featured: data.is_featured,
         is_active: data.is_active,
+        updated_at: now,
       };
 
       let productId: string;
 
       if (editingProduct) {
-        const { error } = await supabase.from("products").update(productPayload).eq("id", editingProduct.id);
-        if (error) throw error;
-        productId = editingProduct.id;
+        productId = editingProduct.id as string;
+        await updateDoc(doc(db, "products", productId), productPayload);
       } else {
-        const { data: newProduct, error } = await supabase.from("products").insert(productPayload).select().single();
-        if (error) throw error;
-        productId = newProduct.id;
+        const ref = doc(collection(db, "products"));
+        productId = ref.id;
+        await setDoc(ref, { ...productPayload, created_at: now });
       }
 
-      // Save variants
       for (const v of variants) {
         if (!v.sku) continue;
         const variantPayload = {
@@ -127,26 +170,23 @@ const AdminProducts = () => {
           compare_at_price: v.compare_at_price ? Number(v.compare_at_price) : null,
           stock_quantity: Number(v.stock_quantity || 0),
           is_active: true,
+          updated_at: now,
         };
-
         if (v.id) {
-          await supabase.from("product_variants").update(variantPayload).eq("id", v.id);
+          await updateDoc(doc(db, "product_variants", v.id), variantPayload);
         } else {
-          await supabase.from("product_variants").insert(variantPayload);
+          await addDoc(collection(db, "product_variants"), { ...variantPayload, created_at: now });
         }
       }
 
-      // Save new images (ones without id are pending uploads already saved to state as URLs)
       const newImages = productImages.filter((img) => !img.id);
-      if (newImages.length > 0) {
-        await supabase.from("product_images").insert(
-          newImages.map((img, i) => ({
-            product_id: productId,
-            url: img.url,
-            sort_order: i,
-            is_primary: i === 0 && productImages.indexOf(img) === 0,
-          }))
-        );
+      for (let i = 0; i < newImages.length; i++) {
+        await addDoc(collection(db, "product_images"), {
+          product_id: productId,
+          url: newImages[i].url,
+          sort_order: i,
+          is_primary: i === 0,
+        });
       }
     },
     onSuccess: () => {
@@ -157,10 +197,13 @@ const AdminProducts = () => {
     },
   });
 
-  const filteredProducts = products.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    (p.design_name || "").toLowerCase().includes(search.toLowerCase()) ||
-    (p.product_variants || []).some((v: any) => v.sku.toLowerCase().includes(search.toLowerCase()))
+  const filteredProducts = products.filter(
+    (p: Record<string, unknown>) =>
+      String(p.name).toLowerCase().includes(search.toLowerCase()) ||
+      String(p.design_name || "").toLowerCase().includes(search.toLowerCase()) ||
+      ((p.product_variants as Record<string, unknown>[]) || []).some((v: Record<string, unknown>) =>
+        String(v.sku).toLowerCase().includes(search.toLowerCase())
+      )
   );
 
   const openAddDialog = () => {
@@ -176,35 +219,43 @@ const AdminProducts = () => {
     setIsDialogOpen(true);
   };
 
-  const openEditDialog = async (product: any) => {
+  const openEditDialog = async (product: Record<string, unknown>) => {
     setEditingProduct(product);
     setFormData({
-      name: product.name, slug: product.slug,
-      description: product.description || "", short_description: product.short_description || "",
+      name: String(product.name),
+      slug: String(product.slug),
+      description: String(product.description || ""),
+      short_description: String(product.short_description || ""),
       base_price: String(product.base_price),
       compare_at_price: product.compare_at_price ? String(product.compare_at_price) : "",
-      design_name: product.design_name || "",
-      category_id: product.category_id || "",
-      fabric: product.fabric || "", dimensions: product.dimensions || "",
-      care_instructions: product.care_instructions || "",
-      tags: (product.tags || []).join(", "),
-      is_featured: product.is_featured, is_active: product.is_active,
+      design_name: String(product.design_name || ""),
+      category_id: String(product.category_id || ""),
+      fabric: String(product.fabric || ""),
+      dimensions: String(product.dimensions || ""),
+      care_instructions: String(product.care_instructions || ""),
+      tags: (product.tags as string[])?.join(", ") || "",
+      is_featured: Boolean(product.is_featured),
+      is_active: Boolean(product.is_active),
     });
+    const pv = (product.product_variants as Record<string, unknown>[]) || [];
     setVariants(
-      (product.product_variants || []).map((v: any) => ({
-        id: v.id, sku: v.sku, color: v.color || "", size: v.size || "",
-        price: String(v.price), compare_at_price: "", stock_quantity: String(v.stock_quantity || 0),
+      pv.map((v) => ({
+        id: v.id as string,
+        sku: String(v.sku),
+        color: String(v.color || ""),
+        size: String(v.size || ""),
+        price: String(v.price),
+        compare_at_price: "",
+        stock_quantity: String(v.stock_quantity || 0),
       }))
     );
-    if ((product.product_variants || []).length === 0) setVariants([{ ...emptyVariant }]);
+    if (pv.length === 0) setVariants([{ ...emptyVariant }]);
 
-    // Load existing images
-    const { data: images } = await supabase
-      .from("product_images")
-      .select("id, url")
-      .eq("product_id", product.id)
-      .order("sort_order");
-    setProductImages((images || []).map((img) => ({ id: img.id, url: img.url })));
+    const imagesSnap = await getDocs(
+      query(collection(db, "product_images"), where("product_id", "==", product.id))
+    );
+    const sorted = imagesSnap.docs.sort((a, b) => (a.data().sort_order ?? 0) - (b.data().sort_order ?? 0));
+    setProductImages(sorted.map((d) => ({ id: d.id, url: d.data().url })));
 
     setIsDialogOpen(true);
   };
@@ -216,28 +267,40 @@ const AdminProducts = () => {
     const text = await file.text();
     const lines = text.split("\n").filter(Boolean);
     const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
-    const products = lines.slice(1).map((line) => {
+    const productsList = lines.slice(1).map((line) => {
       const values = line.split(",");
-      const obj: any = {};
-      headers.forEach((h, i) => { obj[h] = values[i]?.trim(); });
+      const obj: Record<string, string> = {};
+      headers.forEach((h, i) => {
+        obj[h] = values[i]?.trim() ?? "";
+      });
       return obj;
     });
 
     try {
-      const { data, error } = await supabase.functions.invoke("bulk-operations", {
-        body: { operation: "csv-import", data: { products } },
+      const bulkOps = httpsCallable<
+        { operation: string; data: { products: Record<string, unknown>[] } },
+        { created: number; errors?: string[] }
+      >(functions, "bulkOperations");
+      const result = await bulkOps({ operation: "csv-import", data: { products: productsList } });
+      const data = result.data;
+      toast({
+        title: "CSV Import Complete",
+        description: `${data.created} products processed. ${data.errors?.length || 0} errors.`,
       });
-      if (error) throw error;
-      toast({ title: "CSV Import Complete", description: `${data.created} products processed. ${data.errors?.length || 0} errors.` });
       queryClient.invalidateQueries({ queryKey: ["admin-products"] });
-    } catch (err: any) {
-      toast({ title: "Import failed", description: err.message, variant: "destructive" });
+    } catch (err) {
+      toast({
+        title: "Import failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
     }
 
     if (csvInputRef.current) csvInputRef.current.value = "";
   };
 
-  const totalStock = (v: any[]) => v?.reduce((sum: number, x: any) => sum + (x.stock_quantity || 0), 0) || 0;
+  const totalStock = (v: Record<string, unknown>[]) =>
+    v?.reduce((sum: number, x: Record<string, unknown>) => sum + Number(x.stock_quantity || 0), 0) || 0;
 
   return (
     <div>
@@ -273,7 +336,7 @@ const AdminProducts = () => {
                   type="checkbox"
                   checked={selectedIds.size === filteredProducts.length && filteredProducts.length > 0}
                   onChange={(e) => {
-                    if (e.target.checked) setSelectedIds(new Set(filteredProducts.map((p) => p.id)));
+                    if (e.target.checked) setSelectedIds(new Set(filteredProducts.map((p: Record<string, unknown>) => p.id as string)));
                     else setSelectedIds(new Set());
                   }}
                 />
@@ -288,16 +351,16 @@ const AdminProducts = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredProducts.map((product) => (
-              <TableRow key={product.id}>
+            {filteredProducts.map((product: Record<string, unknown>) => (
+              <TableRow key={String(product.id)}>
                 <TableCell>
                   <input
                     type="checkbox"
-                    checked={selectedIds.has(product.id)}
+                    checked={selectedIds.has(product.id as string)}
                     onChange={(e) => {
                       const next = new Set(selectedIds);
-                      if (e.target.checked) next.add(product.id);
-                      else next.delete(product.id);
+                      if (e.target.checked) next.add(product.id as string);
+                      else next.delete(product.id as string);
                       setSelectedIds(next);
                     }}
                   />
@@ -308,10 +371,10 @@ const AdminProducts = () => {
                     <p className="text-xs text-foreground/50">{product.design_name}</p>
                   </div>
                 </TableCell>
-                <TableCell className="text-sm">{product.categories?.name || "—"}</TableCell>
+                <TableCell className="text-sm">{(product.categories as Record<string, unknown>)?.name || "—"}</TableCell>
                 <TableCell className="text-sm">{formatPrice(Number(product.base_price))}</TableCell>
-                <TableCell className="text-sm">{totalStock(product.product_variants)}</TableCell>
-                <TableCell className="text-sm">{product.product_variants?.length || 0}</TableCell>
+                <TableCell className="text-sm">{totalStock((product.product_variants as Record<string, unknown>[]) || [])}</TableCell>
+                <TableCell className="text-sm">{(product.product_variants as unknown[])?.length || 0}</TableCell>
                 <TableCell>
                   <Badge variant={product.is_active ? "default" : "secondary"}>
                     {product.is_active ? "Active" : "Draft"}
@@ -320,7 +383,7 @@ const AdminProducts = () => {
                 <TableCell>
                   <div className="flex gap-1">
                     <button onClick={() => openEditDialog(product)} className="p-2 hover:bg-muted rounded"><Edit2 className="h-4 w-4" /></button>
-                    <button onClick={() => deleteMutation.mutate(product.id)} className="p-2 hover:bg-muted rounded text-destructive"><Trash2 className="h-4 w-4" /></button>
+                    <button onClick={() => deleteMutation.mutate(product.id as string)} className="p-2 hover:bg-muted rounded text-destructive"><Trash2 className="h-4 w-4" /></button>
                   </div>
                 </TableCell>
               </TableRow>
@@ -329,7 +392,6 @@ const AdminProducts = () => {
         </Table>
       </div>
 
-      {/* Add/Edit Dialog with Variant Management */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -412,7 +474,6 @@ const AdminProducts = () => {
               </label>
             </div>
 
-            {/* Image Upload Section */}
             <div className="border-t border-border/30 pt-4">
               <div className="flex items-center justify-between mb-3">
                 <Label className="text-sm font-medium">Product Images</Label>
@@ -426,9 +487,8 @@ const AdminProducts = () => {
                     onChange={async (e) => {
                       const files = Array.from(e.target.files || []);
                       if (files.length === 0) return;
-                      // For new products, use a temp ID; for existing, use real ID
                       const pid = editingProduct?.id || `temp-${Date.now()}`;
-                      const urls = await uploadMultiple(files, pid);
+                      const urls = await uploadMultiple(files, String(pid));
                       setProductImages((prev) => [...prev, ...urls.map((u) => ({ url: u }))]);
                       if (imageInputRef.current) imageInputRef.current.value = "";
                     }}
@@ -454,7 +514,7 @@ const AdminProducts = () => {
                         type="button"
                         onClick={async () => {
                           if (img.id) {
-                            await supabase.from("product_images").delete().eq("id", img.id);
+                            await deleteDoc(doc(db, "product_images", img.id));
                           }
                           setProductImages((prev) => prev.filter((_, j) => j !== i));
                         }}
@@ -468,7 +528,6 @@ const AdminProducts = () => {
               )}
             </div>
 
-            {/* Variants Section */}
             <div className="border-t border-border/30 pt-4">
               <div className="flex items-center justify-between mb-3">
                 <Label className="text-sm font-medium">Variants</Label>

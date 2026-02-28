@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
+import { db } from "@/integrations/firebase/config";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatPrice, formatDate } from "@/lib/formatters";
 import { Link } from "react-router-dom";
@@ -21,17 +22,30 @@ const AccountOrders = () => {
   const { user } = useAuth();
 
   const { data: orders = [], isLoading } = useQuery({
-    queryKey: ["my-orders", user?.id],
+    queryKey: ["my-orders", user?.uid],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("*, order_items(*)")
-        .eq("user_id", user!.id)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
+      const ordersQuery = query(
+        collection(db, "orders"),
+        where("user_id", "==", user!.uid),
+        orderBy("created_at", "desc")
+      );
+      const ordersSnap = await getDocs(ordersQuery);
+      const ordersList = ordersSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const withItems = await Promise.all(
+        ordersList.map(async (order) => {
+          const itemsSnap = await getDocs(
+            query(
+              collection(db, "order_items"),
+              where("order_id", "==", order.id)
+            )
+          );
+          const order_items = itemsSnap.docs.map((di) => ({ id: di.id, ...di.data() }));
+          return { ...order, order_items };
+        })
+      );
+      return withItems;
     },
-    enabled: !!user?.id,
+    enabled: !!user?.uid,
   });
 
   if (isLoading) {
@@ -57,39 +71,38 @@ const AccountOrders = () => {
     <div>
       <h2 className="font-display text-xl mb-6">My Orders</h2>
       <div className="space-y-4">
-        {orders.map((order) => (
-          <div key={order.id} className="border border-border/30 rounded-md p-4">
+        {orders.map((order: Record<string, unknown>) => (
+          <div key={String(order.id)} className="border border-border/30 rounded-md p-4">
             <div className="flex items-start justify-between mb-3">
               <div>
                 <p className="text-sm font-medium">#{order.order_number}</p>
-                <p className="text-xs text-foreground/50">{formatDate(order.created_at || "")}</p>
+                <p className="text-xs text-foreground/50">{formatDate(String(order.created_at || ""))}</p>
               </div>
               <div className="text-right">
-                <Badge className={statusColors[order.status || "pending"]} variant="secondary">
-                  {(order.status || "pending").toUpperCase()}
+                <Badge className={statusColors[String(order.status || "pending")]} variant="secondary">
+                  {String(order.status || "pending").toUpperCase()}
                 </Badge>
                 <p className="text-sm font-medium mt-1">{formatPrice(Number(order.total_amount))}</p>
               </div>
             </div>
 
             <div className="flex gap-2 overflow-x-auto mb-3">
-              {order.order_items.map((item: any) => (
-                <div key={item.id} className="text-xs text-foreground/60 whitespace-nowrap">
+              {(order.order_items as Array<Record<string, unknown>>)?.map((item) => (
+                <div key={String(item.id)} className="text-xs text-foreground/60 whitespace-nowrap">
                   {item.product_name} × {item.quantity}
                 </div>
               ))}
             </div>
 
-            {/* Tracking Info */}
-            {(order as any).tracking_number && (
+            {order.tracking_number && (
               <div className="bg-muted/50 rounded p-3 flex items-center justify-between">
                 <div>
                   <p className="text-xs text-foreground/50">Tracking Number</p>
-                  <p className="text-sm font-mono font-medium">{(order as any).tracking_number}</p>
+                  <p className="text-sm font-mono font-medium">{String(order.tracking_number)}</p>
                 </div>
-                {(order as any).tracking_url && (
+                {order.tracking_url && (
                   <Button variant="outline" size="sm" asChild>
-                    <a href={(order as any).tracking_url} target="_blank" rel="noopener noreferrer" className="gap-2">
+                    <a href={String(order.tracking_url)} target="_blank" rel="noopener noreferrer" className="gap-2">
                       Track <ExternalLink className="h-3 w-3" />
                     </a>
                   </Button>
@@ -97,10 +110,9 @@ const AccountOrders = () => {
               </div>
             )}
 
-            {/* Discount applied */}
-            {(order as any).discount_code && (
+            {order.discount_code && (
               <p className="text-xs text-green-600 mt-2">
-                Discount applied: {(order as any).discount_code} (-{formatPrice(Number((order as any).discount_amount || 0))})
+                Discount applied: {String(order.discount_code)} (-{formatPrice(Number(order.discount_amount || 0))})
               </p>
             )}
           </div>

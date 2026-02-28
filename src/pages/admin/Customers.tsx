@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, query, orderBy, getDocs, where } from "firebase/firestore";
+import { db } from "@/integrations/firebase/config";
 import { formatDate } from "@/lib/formatters";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -11,27 +12,24 @@ const AdminCustomers = () => {
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ["admin-customers"],
     queryFn: async () => {
-      const { data: profiles, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-
-      // Get order counts per user
-      const userIds = (profiles || []).map((p) => p.user_id);
-      const { data: orders } = await supabase
-        .from("orders")
-        .select("user_id, id")
-        .in("user_id", userIds);
-
+      const profilesSnap = await getDocs(
+        query(collection(db, "profiles"), orderBy("created_at", "desc"))
+      );
+      const profiles = profilesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const userIds = profiles.map((p: Record<string, unknown>) => p.user_id).filter(Boolean);
       const orderCounts = new Map<string, number>();
-      (orders || []).forEach((o) => {
-        orderCounts.set(o.user_id!, (orderCounts.get(o.user_id!) || 0) + 1);
-      });
-
-      return (profiles || []).map((p) => ({
+      if (userIds.length > 0) {
+        const ordersSnap = await getDocs(
+          query(collection(db, "orders"), where("user_id", "in", userIds.slice(0, 30)))
+        );
+        ordersSnap.docs.forEach((d) => {
+          const uid = d.data().user_id;
+          if (uid) orderCounts.set(uid, (orderCounts.get(uid) || 0) + 1);
+        });
+      }
+      return profiles.map((p: Record<string, unknown>) => ({
         ...p,
-        orderCount: orderCounts.get(p.user_id) || 0,
+        orderCount: orderCounts.get(p.user_id as string) || 0,
       }));
     },
   });
@@ -59,14 +57,14 @@ const AdminCustomers = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {customers.map((c: any) => (
-                <TableRow key={c.id}>
-                  <TableCell className="font-medium">{c.full_name || "—"}</TableCell>
-                  <TableCell className="text-sm">{c.phone || "—"}</TableCell>
+              {customers.map((c: Record<string, unknown>) => (
+                <TableRow key={String(c.id)}>
+                  <TableCell className="font-medium">{String(c.full_name || "—")}</TableCell>
+                  <TableCell className="text-sm">{String(c.phone || "—")}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{c.orderCount} orders</Badge>
                   </TableCell>
-                  <TableCell className="text-sm">{formatDate(c.created_at || "")}</TableCell>
+                  <TableCell className="text-sm">{formatDate(String(c.created_at || ""))}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

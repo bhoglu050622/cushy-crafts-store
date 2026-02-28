@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, query, where, getDocs, limit } from "firebase/firestore";
+import { db } from "@/integrations/firebase/config";
 import { Badge } from "@/components/ui/badge";
 import { Package } from "lucide-react";
 
@@ -14,13 +15,14 @@ const CollectionRulePreview = ({ rulesJson }: Props) => {
       const rules = JSON.parse(rulesJson);
       const tags = rules.tags || [];
       if (tags.length === 0) return [];
-      const { data } = await supabase
-        .from("products")
-        .select("id, name, slug")
-        .eq("is_active", true)
-        .overlaps("tags", tags)
-        .limit(10);
-      return data || [];
+      const q = query(
+        collection(db, "products"),
+        where("is_active", "==", true),
+        where("tags", "array-contains-any", tags.slice(0, 10)),
+        limit(10)
+      );
+      const snap = await getDocs(q);
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     },
     enabled: (() => {
       try { const r = JSON.parse(rulesJson); return Array.isArray(r.tags) && r.tags.length > 0; }
@@ -42,8 +44,8 @@ const CollectionRulePreview = ({ rulesJson }: Props) => {
       </div>
       {matchingProducts.length > 0 && (
         <div className="flex flex-wrap gap-1">
-          {matchingProducts.map((p: any) => (
-            <Badge key={p.id} variant="outline" className="text-xs">{p.name}</Badge>
+          {matchingProducts.map((p: Record<string, unknown>) => (
+            <Badge key={String(p.id)} variant="outline" className="text-xs">{String(p.name)}</Badge>
           ))}
         </div>
       )}

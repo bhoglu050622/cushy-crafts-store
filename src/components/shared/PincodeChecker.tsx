@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, query, where, getDocs, limit } from "firebase/firestore";
+import { db } from "@/integrations/firebase/config";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, MapPin, Check, X, Truck } from "lucide-react";
@@ -24,16 +25,15 @@ const PincodeChecker = ({ onPincodeVerified }: PincodeCheckerProps) => {
     queryKey: ["pincode", checkPincode],
     queryFn: async () => {
       if (!checkPincode) return null;
-
-      const { data, error } = await supabase
-        .from("pincode_serviceability")
-        .select("*")
-        .eq("pincode", checkPincode)
-        .eq("is_serviceable", true)
-        .single();
-
-      if (error) throw error;
-      return data;
+      const q = query(
+        collection(db, "pincode_serviceability"),
+        where("pincode", "==", checkPincode),
+        where("is_serviceable", "==", true),
+        limit(1)
+      );
+      const snap = await getDocs(q);
+      if (snap.empty) return null;
+      return { id: snap.docs[0].id, ...snap.docs[0].data() };
     },
     enabled: !!checkPincode && checkPincode.length === 6,
     retry: false,
@@ -51,7 +51,6 @@ const PincodeChecker = ({ onPincodeVerified }: PincodeCheckerProps) => {
     }
   };
 
-  // Notify parent when data is available
   if (data && onPincodeVerified) {
     onPincodeVerified({
       pincode: data.pincode,
@@ -101,7 +100,6 @@ const PincodeChecker = ({ onPincodeVerified }: PincodeCheckerProps) => {
         </Button>
       </div>
 
-      {/* Result */}
       {isChecked && !isLoading && (
         <div
           className={cn(
@@ -111,7 +109,7 @@ const PincodeChecker = ({ onPincodeVerified }: PincodeCheckerProps) => {
               : "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800"
           )}
         >
-          {isServiceable ? (
+          {isServiceable && data ? (
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
                 <Check className="h-4 w-4" />

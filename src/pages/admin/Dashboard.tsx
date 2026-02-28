@@ -1,41 +1,39 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, getDocs, query, where, orderBy, doc, getDoc } from "firebase/firestore";
+import { db } from "@/integrations/firebase/config";
 import { formatPrice, formatDate } from "@/lib/formatters";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from "recharts";
 import { DollarSign, Package, ShoppingCart, Users, AlertTriangle, TrendingUp } from "lucide-react";
-import { Link } from "react-router-dom";
 
 const AdminDashboard = () => {
   const { data: stats } = useQuery({
     queryKey: ["admin-stats"],
     queryFn: async () => {
-      const [ordersRes, productsRes, lowStockRes, customersRes] = await Promise.all([
-        supabase.from("orders").select("id, total_amount, status, payment_method, payment_status, created_at"),
-        supabase.from("products").select("id", { count: "exact" }),
-        supabase.from("product_variants").select("id, product_id, stock_quantity, sku, products(name)").lte("stock_quantity", 5),
-        supabase.from("profiles").select("id", { count: "exact" }),
+      const [ordersSnap, productsSnap, variantsSnap, profilesSnap] = await Promise.all([
+        getDocs(query(collection(db, "orders"), orderBy("created_at", "desc"))),
+        getDocs(collection(db, "products")),
+        getDocs(query(collection(db, "product_variants"), where("stock_quantity", "<=", 5))),
+        getDocs(collection(db, "profiles")),
       ]);
 
-      const orders = ordersRes.data || [];
+      const orders = ordersSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       const totalRevenue = orders
-        .filter((o) => o.payment_status === "paid" || o.payment_method === "cod")
-        .reduce((sum, o) => sum + Number(o.total_amount), 0);
+        .filter((o: Record<string, unknown>) => o.payment_status === "paid" || o.payment_method === "cod")
+        .reduce((sum: number, o: Record<string, unknown>) => sum + Number(o.total_amount), 0);
 
-      const pendingOrders = orders.filter((o) => o.status === "pending").length;
-      const codOrders = orders.filter((o) => o.payment_method === "cod").length;
+      const pendingOrders = orders.filter((o: Record<string, unknown>) => o.status === "pending").length;
+      const codOrders = orders.filter((o: Record<string, unknown>) => o.payment_method === "cod").length;
 
-      // Recent 7 days revenue
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       const recentRevenue = orders
-        .filter((o) => new Date(o.created_at!) > sevenDaysAgo)
-        .reduce((sum, o) => sum + Number(o.total_amount), 0);
+        .filter((o: Record<string, unknown>) => new Date((o.created_at as string) || "") > sevenDaysAgo)
+        .reduce((sum: number, o: Record<string, unknown>) => sum + Number(o.total_amount), 0);
 
-      // Build daily revenue for last 30 days
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       const dailyMap: Record<string, { revenue: number; orders: number }> = {};
@@ -43,8 +41,8 @@ const AdminDashboard = () => {
         const key = d.toISOString().slice(0, 10);
         dailyMap[key] = { revenue: 0, orders: 0 };
       }
-      orders.forEach((o) => {
-        const key = (o.created_at || "").slice(0, 10);
+      orders.forEach((o: Record<string, unknown>) => {
+        const key = ((o.created_at as string) || "").slice(0, 10);
         if (dailyMap[key]) {
           dailyMap[key].revenue += Number(o.total_amount);
           dailyMap[key].orders += 1;
@@ -56,12 +54,25 @@ const AdminDashboard = () => {
         orders: v.orders,
       }));
 
+      const lowStockItems = variantsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const productIds = [...new Set(lowStockItems.map((v: Record<string, unknown>) => v.product_id).filter(Boolean))] as string[];
+      const productMap = new Map<string, string>();
+      await Promise.all(
+        productIds.slice(0, 30).map(async (id) => {
+          const snap = await getDoc(doc(db, "products", id));
+          if (snap.exists()) productMap.set(id, snap.data().name);
+        })
+      );
+
       return {
         totalOrders: orders.length,
         totalRevenue,
-        totalProducts: productsRes.count || 0,
-        totalCustomers: customersRes.count || 0,
-        lowStockItems: (lowStockRes.data || []) as any[],
+        totalProducts: productsSnap.size,
+        totalCustomers: profilesSnap.size,
+        lowStockItems: lowStockItems.map((item: Record<string, unknown>) => ({
+          ...item,
+          productName: productMap.get(item.product_id as string) || "—",
+        })),
         pendingOrders,
         codOrders,
         recentRevenue,
@@ -124,13 +135,12 @@ const AdminDashboard = () => {
             <AlertTriangle className="h-4 w-4 text-foreground/40" />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-display">{stats?.lowStockItems.length || 0}</p>
+            <p className="text-2xl font-display">{stats?.lowStockItems?.length || 0}</p>
             <p className="text-xs text-foreground/50 mt-1">{stats?.totalProducts || 0} total products</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Revenue Chart */}
       {stats?.dailyData && stats.dailyData.length > 0 && (
         <div className="grid lg:grid-cols-2 gap-4 mb-8">
           <Card>
@@ -172,7 +182,6 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {/* Low Stock Alerts - Enhanced with product names */}
       {stats?.lowStockItems && stats.lowStockItems.length > 0 && (
         <Card className="mb-8">
           <CardHeader>
@@ -182,13 +191,13 @@ const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {stats.lowStockItems.map((item: any) => (
-                <div key={item.id} className="flex items-center justify-between text-sm p-2 bg-muted/50 rounded">
+              {stats.lowStockItems.map((item: Record<string, unknown>) => (
+                <div key={String(item.id)} className="flex items-center justify-between text-sm p-2 bg-muted/50 rounded">
                   <div className="flex items-center gap-3">
                     <span className="text-foreground/70 font-mono text-xs">{item.sku}</span>
-                    <span className="text-foreground/50 text-xs">{(item as any).products?.name || "—"}</span>
+                    <span className="text-foreground/50 text-xs">{item.productName || "—"}</span>
                   </div>
-                  <Badge variant={item.stock_quantity === 0 ? "destructive" : "outline"} className={item.stock_quantity > 0 ? "border-yellow-500 text-yellow-600" : ""}>
+                  <Badge variant={item.stock_quantity === 0 ? "destructive" : "outline"} className={Number(item.stock_quantity) > 0 ? "border-yellow-500 text-yellow-600" : ""}>
                     {item.stock_quantity === 0 ? "Out of stock" : `${item.stock_quantity} left`}
                   </Badge>
                 </div>
@@ -198,7 +207,6 @@ const AdminDashboard = () => {
         </Card>
       )}
 
-      {/* Recent Orders */}
       {stats?.recentOrders && stats.recentOrders.length > 0 && (
         <Card>
           <CardHeader>
@@ -208,13 +216,13 @@ const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {stats.recentOrders.map((order: any) => (
-                <div key={order.id} className="flex items-center justify-between text-sm p-2 bg-muted/50 rounded">
+              {stats.recentOrders.map((order: Record<string, unknown>) => (
+                <div key={String(order.id)} className="flex items-center justify-between text-sm p-2 bg-muted/50 rounded">
                   <div className="flex items-center gap-3">
-                    <Badge className={statusColors[order.status] || "bg-gray-100 text-gray-800"} variant="secondary">
-                      {order.status?.toUpperCase()}
+                    <Badge className={statusColors[String(order.status)] || "bg-gray-100 text-gray-800"} variant="secondary">
+                      {String(order.status || "").toUpperCase()}
                     </Badge>
-                    <span className="text-foreground/50">{formatDate(order.created_at)}</span>
+                    <span className="text-foreground/50">{formatDate(String(order.created_at))}</span>
                   </div>
                   <span className="font-medium">{formatPrice(Number(order.total_amount))}</span>
                 </div>

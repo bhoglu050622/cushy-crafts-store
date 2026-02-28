@@ -1,7 +1,8 @@
 import { useParams, Link } from "react-router-dom";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "@/integrations/firebase/config";
 import StoreLayout from "@/components/layout/StoreLayout";
 import { formatPrice, formatDate } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
@@ -27,16 +28,21 @@ const OrderTracking = () => {
   const [searchInput, setSearchInput] = useState("");
   const [orderNumber, setOrderNumber] = useState(paramOrderNumber || "");
 
-  const { data: order, isLoading, error } = useQuery({
+  const { data: order, isLoading } = useQuery({
     queryKey: ["track-order", orderNumber],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("*, order_items(*)")
-        .eq("order_number", orderNumber)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
+      if (!orderNumber) return null;
+      const ordersSnap = await getDocs(
+        query(collection(db, "orders"), where("order_number", "==", orderNumber))
+      );
+      if (ordersSnap.empty) return null;
+      const orderDoc = ordersSnap.docs[0];
+      const orderData = { id: orderDoc.id, ...orderDoc.data() };
+      const itemsSnap = await getDocs(
+        query(collection(db, "order_items"), where("order_id", "==", orderDoc.id))
+      );
+      const order_items = itemsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      return { ...orderData, order_items };
     },
     enabled: !!orderNumber,
   });
@@ -55,7 +61,6 @@ const OrderTracking = () => {
           <h1 className="font-display text-3xl mb-2 text-center">Track Your Order</h1>
           <p className="text-foreground/60 text-center mb-8">Enter your order number to see the latest status.</p>
 
-          {/* Search */}
           <form onSubmit={handleSearch} className="flex gap-3 mb-10">
             <Input
               value={searchInput}
@@ -81,24 +86,21 @@ const OrderTracking = () => {
 
           {order && (
             <div className="space-y-6">
-              {/* Order Header */}
               <div className="flex items-start justify-between border border-border/30 rounded-md p-5">
                 <div>
                   <p className="text-xs text-foreground/50 tracking-widest mb-1">ORDER NUMBER</p>
                   <p className="font-mono font-medium">{order.order_number}</p>
-                  <p className="text-xs text-foreground/50 mt-1">{formatDate(order.created_at || "")}</p>
+                  <p className="text-xs text-foreground/50 mt-1">{formatDate(String(order.created_at || ""))}</p>
                 </div>
                 <div className="text-right">
-                  <Badge variant="secondary" className="capitalize">{order.status}</Badge>
+                  <Badge variant="secondary" className="capitalize">{String(order.status)}</Badge>
                   <p className="text-sm font-medium mt-2">{formatPrice(Number(order.total_amount))}</p>
                 </div>
               </div>
 
-              {/* Status Timeline */}
               <div className="border border-border/30 rounded-md p-6">
                 <h3 className="text-xs tracking-widest text-foreground/70 mb-6">ORDER STATUS</h3>
                 <div className="flex items-center justify-between relative">
-                  {/* Progress line */}
                   <div className="absolute top-4 left-6 right-6 h-0.5 bg-border/40" />
                   <div
                     className="absolute top-4 left-6 h-0.5 bg-foreground transition-all duration-500"
@@ -129,7 +131,6 @@ const OrderTracking = () => {
                 )}
               </div>
 
-              {/* Tracking Info */}
               {order.tracking_number && (
                 <div className="border border-border/30 rounded-md p-5">
                   <h3 className="text-xs tracking-widest text-foreground/70 mb-3">SHIPMENT TRACKING</h3>
@@ -149,12 +150,11 @@ const OrderTracking = () => {
                 </div>
               )}
 
-              {/* Order Items */}
               <div className="border border-border/30 rounded-md p-5">
-                <h3 className="text-xs tracking-widest text-foreground/70 mb-4">ITEMS ({order.order_items?.length || 0})</h3>
+                <h3 className="text-xs tracking-widest text-foreground/70 mb-4">ITEMS ({(order.order_items as unknown[])?.length || 0})</h3>
                 <div className="space-y-3">
-                  {(order.order_items || []).map((item: any) => (
-                    <div key={item.id} className="flex justify-between items-center text-sm">
+                  {((order.order_items as Record<string, unknown>[]) || []).map((item) => (
+                    <div key={String(item.id)} className="flex justify-between items-center text-sm">
                       <div>
                         <p className="font-medium">{item.product_name}</p>
                         <p className="text-xs text-foreground/50">{item.variant_info} × {item.quantity}</p>
@@ -165,7 +165,6 @@ const OrderTracking = () => {
                 </div>
               </div>
 
-              {/* Summary */}
               <div className="border border-border/30 rounded-md p-5 space-y-2 text-sm">
                 <div className="flex justify-between"><span className="text-foreground/60">Subtotal</span><span>{formatPrice(Number(order.subtotal))}</span></div>
                 {Number(order.shipping_amount) > 0 && (
