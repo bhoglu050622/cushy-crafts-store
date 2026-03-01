@@ -1,13 +1,45 @@
 # Firebase setup (cushy-crafts-store)
 
-## 1. Create a Firebase project
+## Quick: Import 12 products into Firestore (after web app config is in .env)
 
-1. Go to [Firebase Console](https://console.firebase.google.com).
-2. Add a project (e.g. "cushy-crafts-store" or "Avais Decor").
-3. Enable **Authentication** → Sign-in method → **Email/Password**.
-4. Create **Firestore Database** (start in production mode; rules are in `firestore.rules`).
-5. Create **Storage** bucket; rules are in `storage.rules`.
-6. (Optional) Enable **Cloud Functions** and deploy the `functions/` folder.
+1. **Get a service account key** (one-time):
+   - Open [Firebase Console → Project settings → Service accounts](https://console.firebase.google.com/project/aavisdecor-20861/settings/serviceaccounts/adminsdk).
+   - Click **Generate new private key** → save the JSON file as `service-account.json` in this project root. Do not commit it.
+2. **Run the import** (uses existing `products.json` and `public/product-images/`):
+
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS=./service-account.json
+npm run import:firestore
+```
+
+This creates 12 products, their variants, and product images in Firestore so the app and hero show real data.
+
+---
+
+## 0. Create project (required once)
+
+The CLI cannot create a project until the Google account has **accepted the Terms of Service**.
+
+1. Go to [Firebase Console](https://console.firebase.google.com) and sign in.
+2. If prompted, accept the **Google Cloud / Firebase Terms of Service**.
+3. Click **Add project** (or **Create a project**). Choose a **Project ID** (e.g. `cushy-crafts-store` or `cushy-crafts-aavis`). Complete the wizard.
+4. In your terminal, link the project and deploy everything:
+
+```bash
+firebase use YOUR_PROJECT_ID
+npm run deploy:firebase
+```
+
+(`YOUR_PROJECT_ID` is the value you chose in step 3, e.g. `cushy-crafts-aavis`.)
+
+## 1. Enable services in the project
+
+In [Firebase Console](https://console.firebase.google.com) → your project:
+
+1. **Authentication** → Sign-in method → enable **Email/Password**.
+2. **Firestore Database** → Create database (production mode; rules are deployed from `firestore.rules`).
+3. **Storage** → Get started; rules are deployed from `storage.rules`.
+4. **Cloud Functions** are deployed via `npm run deploy:firebase` (no need to enable in console first).
 
 ## 2. Get config and env
 
@@ -60,7 +92,35 @@ admin.initializeApp({ projectId: 'your-project-id' });
 await admin.auth().setCustomUserClaims('USER_UID_HERE', { role: 'admin' });
 ```
 
-## 5. Data migration
+## 5. Data migration / product import
 
-- Seed categories, gst_settings, shipping_rules, pincode_serviceability, and optionally products via the Firestore import script: `npm run import:products-excel` (see script and .xlsx template).
+### Option A: Import from Excel (with service account)
+
+1. In Firebase Console → Project settings → **Service accounts** → **Generate new private key**. Save the JSON file (e.g. `service-account.json`) in the project root and **do not commit it**.
+2. Set the env and run the import (downloads images to `public/product-images/` and writes to Firestore):
+
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS=./service-account.json
+SAVE_IMAGES=1 npm run import:products-excel
+```
+
+### Option B: Use saved images + products.json (no Firestore write yet)
+
+If you already ran a dry run and have `public/product-images/` and `products.json`:
+
+1. To push those products into Firestore, add a **service account key** (see Option A step 1).
+2. Then run:
+
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS=./service-account.json
+node scripts/import-from-products-json.js
+```
+
+To (re)generate `products.json` and download images from the Excel **without** writing to Firestore:
+
+```bash
+DRY_RUN=1 SAVE_IMAGES=1 node scripts/import-products-from-excel.js
+```
+
+- Seed categories, gst_settings, shipping_rules, pincode_serviceability as needed.
 - Existing Supabase users need to sign up again unless you import Auth users (e.g. Firebase Auth import with hashes).

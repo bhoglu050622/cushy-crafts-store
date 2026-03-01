@@ -23,3 +23,7 @@ supabase/.temp/
 *.njsproj
 *.sln
 *.sw?
+products.json
+service-account.json
+.env
+.env.local

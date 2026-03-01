@@ -1,15 +1,22 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import heroImage from "@/assets/hero-home.jpg";
+import { useFeaturedProducts } from "@/hooks/useProducts";
+import heroImageFallback from "@/assets/hero-home.jpg";
 
 const HeroBanner = () => {
+  const { data: featuredProducts = [] } = useFeaturedProducts();
+  const heroProduct = featuredProducts[0];
+  const heroImageUrl = heroProduct?.images?.find((img) => img.isPrimary)?.url ?? heroProduct?.images?.[0]?.url ?? null;
+  const heroSrc = heroImageUrl != null ? (heroImageUrl.startsWith("http") ? heroImageUrl : heroImageUrl) : heroImageFallback;
+  const heroAlt = heroProduct ? `${heroProduct.name} – Aavis Decor` : "Luxurious Indian home textiles by Aavis Decor";
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Background image */}
+      {/* Background image: first featured product or fallback */}
       <div className="absolute inset-0">
         <img
-          src={heroImage}
-          alt="Luxurious Indian home textiles by Aavis Decor"
+          src={heroSrc}
+          alt={heroAlt}
           className="w-full h-full object-cover"
           loading="eager"
         />

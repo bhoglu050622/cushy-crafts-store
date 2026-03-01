@@ -26,7 +26,7 @@ const FeaturedProducts = () => {
             </h2>
           </div>
           <Link
-            to="/category/pillow-covers"
+            to="/collections"
             className="mt-6 md:mt-0 inline-block text-xs tracking-widest uppercase text-foreground font-medium border-b border-foreground/30 pb-1 hover:border-foreground transition-colors self-start md:self-auto"
           >
             View all products

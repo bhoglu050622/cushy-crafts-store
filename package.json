@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "import:products-excel": "node scripts/import-products-from-excel.js",
+    "import:firestore": "node scripts/import-from-products-json.js",
     "deploy:firebase": "firebase deploy"
   },
   "dependencies": {
