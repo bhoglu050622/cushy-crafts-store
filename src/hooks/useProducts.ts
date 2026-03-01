@@ -202,7 +202,7 @@ export const usePaginatedProducts = (params: PaginatedProductsParams = {}) => {
       if (priceMax != null) constraints.push(where("base_price", "<=", priceMax));
 
       const orderField = sortBy === "price-low" || sortBy === "price-high" ? "base_price" : "created_at";
-      const orderDir = sortBy === "price-high" ? "desc" : "asc";
+      const orderDir = sortBy === "price-low" ? "asc" : "desc";
       constraints.push(orderBy(orderField, orderDir));
 
       const productsQuery = query(collection(db, "products"), ...constraints);
@@ -396,9 +396,9 @@ export const useProduct = (slug: string) => {
         )
       );
       if (productsSnap.empty) throw new Error("Product not found");
-      const doc = productsSnap.docs[0];
-      const productId = doc.id;
-      const p = doc.data();
+      const productDoc = productsSnap.docs[0];
+      const productId = productDoc.id;
+      const p = productDoc.data();
 
       const [variantsSnap, imagesSnap, catDoc] = await Promise.all([
         getDocs(

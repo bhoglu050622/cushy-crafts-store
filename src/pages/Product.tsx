@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import StoreLayout from "@/components/layout/StoreLayout";
 import ImageGallery from "@/components/products/ImageGallery";
 import VariantSelector from "@/components/products/VariantSelector";
@@ -8,6 +8,8 @@ import PincodeChecker from "@/components/shared/PincodeChecker";
 import ProductGrid from "@/components/products/ProductGrid";
 import { useProduct, useProducts, ProductVariant } from "@/hooks/useProducts";
 import { useCart } from "@/contexts/CartContext";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/integrations/firebase/config";
 import { Button } from "@/components/ui/button";
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
@@ -20,6 +22,7 @@ import PageMeta from "@/components/seo/PageMeta";
 
 const Product = () => {
   const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
   const { data: product, isLoading, error } = useProduct(slug || "");
   const { data: allProducts = [] } = useProducts();
   const { addItem } = useCart();
@@ -41,6 +44,7 @@ const Product = () => {
     const primaryImage = product.images.find((img) => img.isPrimary) || product.images[0];
     addItem({
       productId: product.id,
+      productSlug: product.slug,
       variantId: selectedVariant.id,
       name: product.name,
       variantInfo: [selectedVariant.color, selectedVariant.size].filter(Boolean).join(" / ") || "Default",
@@ -59,6 +63,21 @@ const Product = () => {
   const relatedProducts = allProducts
     .filter((p) => p.categoryId === product?.categoryId && p.id !== product?.id)
     .slice(0, 4);
+
+  // When slug looks like a Firestore doc ID (e.g. from old cart link), fetch by id and redirect to canonical slug URL
+  useEffect(() => {
+    if (isLoading || product || !slug) return;
+    const looksLikeId = slug.length >= 15 && slug.length <= 30 && /^[a-zA-Z0-9_-]+$/.test(slug);
+    if (!looksLikeId) return;
+    let cancelled = false;
+    getDoc(doc(db, "products", slug)).then((snap) => {
+      if (cancelled || !snap.exists()) return;
+      const data = snap.data();
+      const productSlug = data?.slug;
+      if (productSlug && productSlug !== slug) navigate(`/product/${productSlug}`, { replace: true });
+    });
+    return () => { cancelled = true; };
+  }, [slug, isLoading, product, navigate]);
 
   if (isLoading) {
     return (

@@ -46,7 +46,7 @@ const CartDrawer = () => {
                 >
                   {/* Image */}
                   <Link
-                    to={`/product/${item.productId}`}
+                    to={`/product/${item.productSlug ?? item.productId}`}
                     onClick={() => setIsOpen(false)}
                     className="w-20 h-24 flex-shrink-0 bg-muted overflow-hidden"
                   >
@@ -62,7 +62,7 @@ const CartDrawer = () => {
                     <div className="flex justify-between gap-2">
                       <div>
                         <Link
-                          to={`/product/${item.productId}`}
+                          to={`/product/${item.productSlug ?? item.productId}`}
                           onClick={() => setIsOpen(false)}
                           className="font-display text-sm hover:underline line-clamp-2"
                         >

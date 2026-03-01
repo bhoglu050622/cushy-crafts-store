@@ -55,6 +55,19 @@ VITE_FIREBASE_MESSAGING_SENDER_ID="..."
 VITE_FIREBASE_APP_ID="..."
 ```
 
+## 2b. Production deploy (Hostinger / aavisdecor.com)
+
+For the **live site** to load categories and products from Firestore (and to avoid `auth/invalid-api-key`):
+
+1. **Build must have Firebase config**  
+   Vite loads `.env.production` when you run `npm run build`. Ensure the build runs from the repo root so `.env.production` exists, or set the same six `VITE_FIREBASE_*` variables in your host’s build environment (e.g. Hostinger dashboard) so the built bundle gets valid config.
+
+2. **Firebase authorized domains**  
+   In [Firebase Console → Authentication → Settings → Authorized domains](https://console.firebase.google.com/project/aavisdecor-20861/authentication/settings), add:
+   - `aavisdecor.com`
+   - `www.aavisdecor.com`  
+   Otherwise auth and Firestore may be blocked on the live site.
+
 ## 3. Deploy rules and functions
 
 ```bash

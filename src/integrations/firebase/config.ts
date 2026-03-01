@@ -13,6 +13,12 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
+if (import.meta.env.PROD && !firebaseConfig.apiKey) {
+  console.error(
+    "Missing Firebase config in production. Set VITE_FIREBASE_* in build env or use .env.production."
+  );
+}
+
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);

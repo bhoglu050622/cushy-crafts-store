@@ -61,7 +61,7 @@ const Cart = () => {
                 >
                   {/* Image */}
                   <Link
-                    to={`/product/${item.productId}`}
+                    to={`/product/${item.productSlug ?? item.productId}`}
                     className="w-28 h-36 flex-shrink-0 bg-muted overflow-hidden"
                   >
                     <img
@@ -76,7 +76,7 @@ const Cart = () => {
                     <div className="flex justify-between gap-4">
                       <div>
                         <Link
-                          to={`/product/${item.productId}`}
+                          to={`/product/${item.productSlug ?? item.productId}`}
                           className="font-display text-lg hover:underline"
                         >
                           {item.name}

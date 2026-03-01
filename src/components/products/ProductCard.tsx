@@ -30,6 +30,7 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
 
     addItem({
       productId: product.id,
+      productSlug: product.slug,
       variantId: firstVariant.id,
       name: product.name,
       variantInfo: [firstVariant.color, firstVariant.size].filter(Boolean).join(" / ") || "Default",

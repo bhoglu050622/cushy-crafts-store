@@ -34,6 +34,23 @@ const CategoryShowcase = () => {
                   <Skeleton className="h-6 w-1/2" />
                 </div>
               ))
+            : categories.length === 0
+            ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="md:col-span-3 text-center py-12"
+                >
+                  <p className="text-foreground/60 text-sm mb-4">Unable to load categories. Try refreshing.</p>
+                  <Link
+                    to="/collections"
+                    className="inline-block text-xs tracking-widest uppercase text-foreground font-medium border-b border-foreground/30 pb-1 hover:border-foreground transition-colors"
+                  >
+                    Shop all products
+                  </Link>
+                </motion.div>
+              )
             : categories.map((cat, i) => (
                 <motion.div
                   key={cat.slug}
