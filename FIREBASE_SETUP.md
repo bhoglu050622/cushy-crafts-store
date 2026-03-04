@@ -68,6 +68,9 @@ For the **live site** to load categories and products from Firestore (and to avo
    - `www.aavisdecor.com`  
    Otherwise auth and Firestore may be blocked on the live site.
 
+3. **SPA routing (category/product URLs)**  
+   The repo includes `public/.htaccess`, which is copied into the build output. Deploy the **entire** `dist/` folder (e.g. as the document root on Hostinger) so that `.htaccess` is at the root. That way requests to `/category/pillow-covers`, `/product/...`, `/collections`, etc. are rewritten to `index.html` and the React app can load. If `/category/pillow-covers` returns a 404, the server is not applying the rewrite; ensure the deployed site root contains `.htaccess` and that Apache `mod_rewrite` is enabled.
+
 ## 3. Deploy rules and functions
 
 ```bash

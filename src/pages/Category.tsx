@@ -13,8 +13,9 @@ const PAGE_SIZE = 20;
 const Category = () => {
   const { slug } = useParams<{ slug: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { data: categories = [] } = useCategories();
+  const { data: categories = [], isLoading: categoriesLoading } = useCategories();
   const category = categories.find((c) => c.slug === slug);
+  const slugNotFound = Boolean(slug && !categoriesLoading && categories.length > 0 && !category);
 
   const page = Number(searchParams.get("page") || "1");
 
@@ -69,6 +70,19 @@ const Category = () => {
     setSearchParams(params);
   };
 
+  if (slugNotFound) {
+    return (
+      <StoreLayout>
+        <PageMeta title="Category not found" description="Browse all products at Aavis Decor." />
+        <div className="pt-32 pb-20 container text-center">
+          <h1 className="font-display text-2xl text-foreground mb-2">Category not found</h1>
+          <p className="text-foreground/60 mb-6">There is no category matching &quot;{slug}&quot;.</p>
+          <Button asChild><Link to="/collections">View all products</Link></Button>
+        </div>
+      </StoreLayout>
+    );
+  }
+
   return (
     <StoreLayout>
       <PageMeta
@@ -109,6 +123,11 @@ const Category = () => {
             />
 
             <div className="flex-1">
+              {category && totalCount === 0 && !isLoading && (
+                <p className="text-foreground/60 text-center mb-6">
+                  No products in {category.name} yet. <Link to="/collections" className="underline hover:text-foreground">Browse all products</Link> or try another category.
+                </p>
+              )}
               <ProductGrid products={products} isLoading={isLoading} />
 
               {/* Pagination */}
