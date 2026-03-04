@@ -70,6 +70,7 @@ async function main() {
     categoryByKey.set((c.slug || "").toLowerCase(), d.id);
   });
   categoryByKey.set("curtain", categoryByKey.get("curtains") || null);
+  categoryByKey.set("tablecloth", categoryByKey.get("table linens") || categoryByKey.get("table-linens") || null);
 
   let created = 0;
   for (const p of products) {

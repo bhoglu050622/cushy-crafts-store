@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Import products from product_upload_template (1) (1).xlsx into Firestore.
+ * Import products from product_upload_template (1) (1) (1).xlsx into Firestore.
  * Uses .env: VITE_FIREBASE_PROJECT_ID (and GOOGLE_APPLICATION_CREDENTIALS for service account if needed).
  *
  * Run: node scripts/import-products-from-excel.js
@@ -23,7 +23,7 @@ dotenv.config({ path: path.join(ROOT, ".env") });
 
 const excelPath =
   process.env.EXCEL_PATH ||
-  path.join(ROOT, "product_upload_template (1) (1).xlsx");
+  path.join(ROOT, "product_upload_template (1) (1) (1).xlsx");
 const SAVE_IMAGES = process.env.SAVE_IMAGES === "1" || process.env.SAVE_IMAGES === "true";
 const DRY_RUN = process.env.DRY_RUN === "1" || process.env.DRY_RUN === "true";
 const PRODUCT_IMAGES_DIR = path.join(ROOT, "public", "product-images");
@@ -207,6 +207,7 @@ async function main() {
     categoryByKey.set((c.slug || "").toLowerCase(), d.id);
   });
   categoryByKey.set("curtain", categoryByKey.get("curtains") || null);
+  categoryByKey.set("tablecloth", categoryByKey.get("table linens") || categoryByKey.get("table-linens") || null);
 
   let created = 0;
   let skipped = 0;
