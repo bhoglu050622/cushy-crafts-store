@@ -210,6 +210,7 @@ async function main() {
   categoryByKey.set("tablecloth", categoryByKey.get("table linens") || categoryByKey.get("table-linens") || null);
 
   let created = 0;
+  let updated = 0;
   let skipped = 0;
   let errors = 0;
 
@@ -235,7 +236,7 @@ async function main() {
     const size = (r.size || "").toString().trim() || null;
 
     const now = new Date().toISOString();
-    const productPayload = {
+    const productPayloadBase = {
       name,
       slug,
       category_id: categoryId,
@@ -250,13 +251,26 @@ async function main() {
       tags: Array.isArray(r.tags) ? r.tags : (r.tags ? String(r.tags).split(/[,;]/).map((t) => t.trim()).filter(Boolean) : null),
       is_featured: i < 4 || parseBool(r.featured),
       is_active: parseBool(r.active),
-      created_at: now,
       updated_at: now,
     };
 
-    const productRef = await db.collection("products").add(productPayload);
+    // Upsert product by slug to avoid duplicates
+    const existingProductSnap = await db.collection("products").where("slug", "==", slug).limit(1).get();
+    let productRef;
+    if (!existingProductSnap.empty) {
+      productRef = existingProductSnap.docs[0].ref;
+      await productRef.update(productPayloadBase);
+      updated++;
+    } else {
+      const productPayload = {
+        ...productPayloadBase,
+        created_at: now,
+      };
+      productRef = await db.collection("products").add(productPayload);
+      created++;
+    }
 
-    const variantPayload = {
+    const variantPayloadBase = {
       product_id: productRef.id,
       sku,
       color,
@@ -265,10 +279,22 @@ async function main() {
       compare_at_price: compareAtPrice,
       stock_quantity: stock,
       is_active: true,
-      created_at: now,
       updated_at: now,
     };
-    const variantRef = await db.collection("product_variants").add(variantPayload);
+
+    // Upsert variant by SKU to avoid duplicates
+    const existingVariantSnap = await db.collection("product_variants").where("sku", "==", sku).limit(1).get();
+    let variantRef;
+    if (!existingVariantSnap.empty) {
+      variantRef = existingVariantSnap.docs[0].ref;
+      await variantRef.update(variantPayloadBase);
+    } else {
+      const variantPayload = {
+        ...variantPayloadBase,
+        created_at: now,
+      };
+      variantRef = await db.collection("product_variants").add(variantPayload);
+    }
 
     const imageUrls = [];
     for (let j = 1; j <= 8; j++) {
@@ -320,11 +346,9 @@ async function main() {
       });
       await batch.commit();
     }
-
-    created++;
   }
 
-  console.log("Import done. Created:", created, "Skipped:", skipped, "Errors:", errors);
+  console.log("Import done. Created products:", created, "Updated products:", updated, "Skipped rows:", skipped, "Errors:", errors);
   if (SAVE_IMAGES) console.log("Images saved under public/product-images/");
 }
 
