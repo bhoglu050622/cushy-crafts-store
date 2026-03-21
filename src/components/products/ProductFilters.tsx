@@ -13,7 +13,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -44,6 +43,16 @@ const sortOptions = [
   { value: "price-low", label: "Price: Low to High" },
   { value: "price-high", label: "Price: High to Low" },
   { value: "name", label: "Name: A to Z" },
+];
+
+/** Suggested price ranges for quick selection. Format: [min, max] - use maxPrice for "Above" */
+const getSuggestedPriceRanges = (maxPrice: number) => [
+  { label: "Under ₹500", range: [0, 500] as [number, number] },
+  { label: "₹500 - ₹1,000", range: [500, 1000] as [number, number] },
+  { label: "₹1,000 - ₹2,000", range: [1000, 2000] as [number, number] },
+  { label: "₹2,000 - ₹5,000", range: [2000, 5000] as [number, number] },
+  { label: "₹5,000 - ₹10,000", range: [5000, 10000] as [number, number] },
+  { label: "Above ₹10,000", range: [10000, maxPrice] as [number, number] },
 ];
 
 const FilterSection = ({
@@ -193,20 +202,55 @@ const FiltersContent = ({
 
       {/* Price Range */}
       <FilterSection title="PRICE RANGE">
-        <div className="px-2">
-          <Slider
-            value={filters.priceRange}
-            min={0}
-            max={maxPrice}
-            step={100}
-            onValueChange={(value) =>
-              onFiltersChange({ ...filters, priceRange: value as [number, number] })
-            }
-            className="mt-2"
-          />
-          <div className="flex justify-between mt-3 text-xs text-foreground/60">
-            <span>₹{filters.priceRange[0].toLocaleString("en-IN")}</span>
-            <span>₹{filters.priceRange[1].toLocaleString("en-IN")}</span>
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => onFiltersChange({ ...filters, priceRange: [0, maxPrice] })}
+              className={cn(
+                "px-3 py-1.5 text-xs border transition-colors",
+                filters.priceRange[0] === 0 && filters.priceRange[1] === maxPrice
+                  ? "bg-foreground text-background border-foreground"
+                  : "border-border/50 text-foreground/70 hover:border-foreground"
+              )}
+            >
+              All
+            </button>
+            {getSuggestedPriceRanges(maxPrice).map(({ label, range }) => {
+              const isActive =
+                filters.priceRange[0] === range[0] && filters.priceRange[1] === range[1];
+              return (
+                <button
+                  type="button"
+                  key={label}
+                  onClick={() => onFiltersChange({ ...filters, priceRange: range })}
+                  className={cn(
+                    "px-3 py-1.5 text-xs border transition-colors whitespace-nowrap",
+                    isActive
+                      ? "bg-foreground text-background border-foreground"
+                      : "border-border/50 text-foreground/70 hover:border-foreground"
+                  )}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="px-2">
+            <Slider
+              value={filters.priceRange}
+              min={0}
+              max={maxPrice}
+              step={100}
+              onValueChange={(value) =>
+                onFiltersChange({ ...filters, priceRange: value as [number, number] })
+              }
+              className="mt-2"
+            />
+            <div className="flex justify-between mt-3 text-xs text-foreground/60">
+              <span>₹{filters.priceRange[0].toLocaleString("en-IN")}</span>
+              <span>₹{filters.priceRange[1].toLocaleString("en-IN")}</span>
+            </div>
           </div>
         </div>
       </FilterSection>

@@ -254,20 +254,23 @@ export const usePaginatedProducts = (params: PaginatedProductsParams = {}) => {
       const constraints: QueryConstraint[] = [where("is_active", "==", true)];
       if (categoryId) constraints.push(where("category_id", "==", categoryId));
       if (fabric) constraints.push(where("fabric", "==", fabric));
-      if (priceMin != null) constraints.push(where("base_price", ">=", priceMin));
-      if (priceMax != null) constraints.push(where("base_price", "<=", priceMax));
+      if (priceMin != null && priceMin > 0) constraints.push(where("max_variant_price", ">=", priceMin));
+      if (priceMax != null && priceMax > 0) constraints.push(where("base_price", "<=", priceMax));
 
       const hasPriceFilter = priceMin != null || priceMax != null;
+      const hasPriceMin = priceMin != null && priceMin > 0;
       const orderField =
-        hasPriceFilter || sortBy === "price-low" || sortBy === "price-high"
-          ? "base_price"
-          : sortBy === "name"
-            ? "name"
-            : "created_at";
+        hasPriceMin
+          ? "max_variant_price"
+          : hasPriceFilter || sortBy === "price-low" || sortBy === "price-high"
+            ? "base_price"
+            : sortBy === "name"
+              ? "name"
+              : "created_at";
       const orderDir =
         sortBy === "price-high"
           ? "desc"
-          : sortBy === "price-low" || sortBy === "name"
+          : sortBy === "price-low" || sortBy === "name" || hasPriceMin
             ? "asc"
             : "desc";
       constraints.push(orderBy(orderField, orderDir));

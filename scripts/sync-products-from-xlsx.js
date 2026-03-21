@@ -205,7 +205,7 @@ async function main() {
 
   const db = await getDb();
   const { byNormKey: categoryByNormKey } = await buildCategoryMaps(db);
-  const { productById, variantBySku, imagesByProductId } = await loadDbState(db);
+  const { productById, variantBySku, variantsByProductId, imagesByProductId } = await loadDbState(db);
 
   const report = {
     mode: shouldApply ? "apply" : "audit",
@@ -258,6 +258,7 @@ async function main() {
           category_id: expected.categoryId,
           design_name: expected.designName,
           base_price: expected.basePrice,
+          max_variant_price: expected.variantPrice,
           compare_at_price: expected.compareAtPrice,
           description: expected.description,
           short_description: expected.shortDescription,
@@ -316,6 +317,12 @@ async function main() {
     if (expected.categoryId !== product.category_id) productPatch.category_id = expected.categoryId;
     if (parseNum(product.base_price, 0) !== expected.basePrice) productPatch.base_price = expected.basePrice;
     if ((product.compare_at_price ?? null) !== expected.compareAtPrice) productPatch.compare_at_price = expected.compareAtPrice;
+
+    const allVariants = variantsByProductId.get(productId) || [];
+    const maxVariantPrice = Math.max(
+      ...allVariants.map((v) => (v.id === existingVariant.id ? expected.variantPrice : parseNum(v.price, 0)))
+    );
+    if (parseNum(product.max_variant_price, 0) !== maxVariantPrice) productPatch.max_variant_price = maxVariantPrice;
     if (!sameString(product.design_name, expected.designName)) productPatch.design_name = expected.designName;
     if (!sameString(product.description, expected.description)) productPatch.description = expected.description;
     if (!sameString(product.short_description, expected.shortDescription)) productPatch.short_description = expected.shortDescription;

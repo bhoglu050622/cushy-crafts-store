@@ -10,6 +10,16 @@ interface VariantSelectorProps {
 
 const norm = (s: string | null | undefined) => (s || "").toString().trim().toLowerCase();
 
+/** Normalize size for tolerant matching: punctuation, extra spaces (e.g. "Door - 7 Feet" vs "Door 7 Feet"). */
+const normSize = (s: string | null | undefined) =>
+  (s || "")
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/\s*-\s*/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
 const VariantSelector = ({ variants, selectedVariant, onSelect }: VariantSelectorProps) => {
   // Extract unique colors and sizes
   const colors = [...new Set(variants.map((v) => v.color).filter(Boolean))] as string[];
@@ -18,13 +28,22 @@ const VariantSelector = ({ variants, selectedVariant, onSelect }: VariantSelecto
   const selectedColor = selectedVariant?.color;
   const selectedSize = selectedVariant?.size;
 
-  // Find variant matching selected options
+  // Find variant matching selected options (with tolerant size matching)
   const findVariant = (color?: string, size?: string) => {
-    return variants.find((v) => {
-      const colorMatch = !colors.length || norm(v.color) === norm(color);
-      const sizeMatch = !sizes.length || norm(v.size) === norm(size);
-      return colorMatch && sizeMatch && v.isActive;
-    });
+    return (
+      variants.find((v) => {
+        const colorMatch = !colors.length || norm(v.color) === norm(color);
+        const sizeMatch = !sizes.length || norm(v.size) === norm(size);
+        return colorMatch && sizeMatch && v.isActive;
+      }) ||
+      (size
+        ? variants.find((v) => {
+            const colorMatch = !colors.length || norm(v.color) === norm(color);
+            const sizeMatch = !sizes.length || normSize(v.size) === normSize(size);
+            return colorMatch && sizeMatch && v.isActive;
+          })
+        : undefined)
+    );
   };
 
   const handleColorSelect = (color: string) => {
@@ -45,9 +64,10 @@ const VariantSelector = ({ variants, selectedVariant, onSelect }: VariantSelecto
   };
 
   const isSizeAvailable = (size: string) => {
+    const sizeNorm = normSize(size);
     return variants.some(
       (v) =>
-        norm(v.size) === norm(size) &&
+        (norm(v.size) === norm(size) || normSize(v.size) === sizeNorm) &&
         (!selectedColor || norm(v.color) === norm(selectedColor)) &&
         v.isActive &&
         v.stockQuantity > 0
@@ -120,7 +140,7 @@ const VariantSelector = ({ variants, selectedVariant, onSelect }: VariantSelecto
                   disabled={!available}
                   className={cn(
                     "min-w-[60px] px-4 py-2.5 text-xs border transition-colors",
-                    norm(selectedSize) === norm(size)
+                    norm(selectedSize) === norm(size) || normSize(selectedSize) === normSize(size)
                       ? "bg-foreground text-background border-foreground"
                       : "border-border/50 text-foreground/70 hover:border-foreground",
                     !available && "opacity-40 cursor-not-allowed line-through"

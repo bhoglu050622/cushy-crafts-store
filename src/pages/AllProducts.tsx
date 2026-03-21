@@ -40,7 +40,10 @@ const AllProducts = () => {
     sizes: filters.sizes.length > 0 ? filters.sizes : undefined,
     fabric: filters.fabric || undefined,
     priceMin: filters.priceRange[0] > 0 ? filters.priceRange[0] : undefined,
-    priceMax: filters.priceRange[1] < 50000 ? filters.priceRange[1] : undefined,
+    priceMax:
+      filters.priceRange[1] < 50000 && filters.priceRange[1] > 0
+        ? filters.priceRange[1]
+        : undefined,
     inStockOnly: filters.inStockOnly || undefined,
   });
 

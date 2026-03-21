@@ -299,6 +299,7 @@ async function main() {
       batch.update(db.collection("products").doc(primaryProductId), {
         slug_aliases: merged,
         base_price: Math.min(...group.map((r) => r.basePrice)),
+        max_variant_price: Math.max(...group.map((r) => r.variantPrice)),
         updated_at: new Date().toISOString(),
       });
     }

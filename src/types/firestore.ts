@@ -53,6 +53,7 @@ export interface ProductRow {
   is_active: boolean | null;
   is_featured: boolean | null;
   base_price: number;
+  max_variant_price?: number;
   compare_at_price: number | null;
   gst_rate: number | null;
   tags: string[] | null;
