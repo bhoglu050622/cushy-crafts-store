@@ -7,7 +7,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "db:migrate": "tsx src/db/migrate.ts",
-    "etl:firestore": "tsx scripts/etl-firestore-to-postgres.ts"
+    "etl:firestore": "tsx scripts/etl-firestore-to-postgres.ts",
+    "import:excel": "node scripts/import-excel-catalog.mjs"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
@@ -29,6 +30,7 @@
     "drizzle-kit": "^0.30.6",
     "firebase-admin": "^13.7.0",
     "tsx": "^4.19.3",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "xlsx": "^0.18.5"
   }
 }

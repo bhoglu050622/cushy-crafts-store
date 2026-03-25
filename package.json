@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "import:products-excel": "node scripts/import-products-from-excel.js",
+    "import:excel:postgres": "npm run import:excel --prefix server",
     "import:firestore": "node scripts/import-from-products-json.js",
     "env:firebase-web": "node scripts/fetch-web-sdk-config.mjs",
     "env:firebase-web:cli": "node scripts/print-vite-env-from-firebase-cli.mjs",

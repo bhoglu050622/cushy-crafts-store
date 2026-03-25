@@ -17,6 +17,16 @@ npm ci
 npm run db:migrate
 ```
 
+Load catalog from the Excel template tracked in the repo (`product_upload_template (1) (1) (2).xlsx` at project root):
+
+```bash
+npm run import:excel
+```
+
+Or from the monorepo root: `npm run import:excel:postgres`.
+
+**Accounts:** Shoppers are stored in Postgres (`users`, `profiles`, `user_roles`). Sign-up and sign-in use email + password hashes only—there is **no email verification**; the API sets a session cookie on successful registration.
+
 Enable daily backups (example cron):
 
 `0 3 * * * pg_dump "$DATABASE_URL" | gzip > /var/backups/cushy-$(date +\%F).sql.gz`

@@ -23,7 +23,7 @@ dotenv.config({ path: path.join(ROOT, ".env") });
 
 const excelPath =
   process.env.EXCEL_PATH ||
-  path.join(ROOT, "product_upload_template (1) (1) (1).xlsx");
+  path.join(ROOT, "product_upload_template (1) (1) (2).xlsx");
 const SAVE_IMAGES = process.env.SAVE_IMAGES === "1" || process.env.SAVE_IMAGES === "true";
 const DRY_RUN = process.env.DRY_RUN === "1" || process.env.DRY_RUN === "true";
 const PRODUCT_IMAGES_DIR = path.join(ROOT, "public", "product-images");
