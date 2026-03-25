@@ -93,7 +93,7 @@ const ImageGallery = ({ images, productName, emptyLabel }: ImageGalleryProps) =>
       <div className="flex-1 relative">
         <Dialog>
           <DialogTrigger asChild>
-            <div className="relative aspect-[3/4] bg-muted overflow-hidden cursor-zoom-in group">
+            <div className="relative w-full min-h-[280px] sm:min-h-[360px] lg:min-h-[480px] max-h-[min(88vh,920px)] flex items-center justify-center bg-muted overflow-hidden cursor-zoom-in group py-2">
               <AnimatePresence initial={false} mode="wait">
                 <motion.img
                   key={currentIndex}
@@ -104,29 +104,41 @@ const ImageGallery = ({ images, productName, emptyLabel }: ImageGalleryProps) =>
                   animate="center"
                   exit="exit"
                   transition={{ opacity: { duration: 0.22 } }}
-                  className="absolute inset-0 w-full h-full object-contain object-center"
+                  className="w-full h-auto max-h-[min(88vh,920px)] object-contain object-center mx-auto"
                 />
               </AnimatePresence>
-              
+
               {/* Zoom Icon */}
-              <div className="absolute top-4 right-4 bg-background/80 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute top-4 right-4 bg-background/90 p-2 opacity-0 group-hover:opacity-100 transition-opacity rounded-sm shadow-sm z-10">
                 <ZoomIn className="h-5 w-5 text-foreground" />
               </div>
             </div>
           </DialogTrigger>
-          
-          <DialogContent className="max-w-4xl p-0 bg-transparent border-none">
+
+          <DialogContent
+            className={cn(
+              "max-w-[min(100vw-1rem,56rem)] p-3 sm:p-4 gap-0",
+              "bg-zinc-950/95 border border-white/15 shadow-2xl",
+              "[&>button]:absolute [&>button]:right-3 [&>button]:top-3 [&>button]:z-[60]",
+              "[&>button]:h-10 [&>button]:w-10 [&>button]:rounded-full",
+              "[&>button]:bg-white [&>button]:text-zinc-900 [&>button]:opacity-100",
+              "[&>button]:shadow-lg [&>button]:ring-2 [&>button]:ring-white/30",
+              "[&>button]:hover:bg-white [&>button]:hover:opacity-95"
+            )}
+          >
             <DialogTitle className="sr-only">
               {currentImage.altText || `${productName} — enlarged image`}
             </DialogTitle>
             <DialogDescription className="sr-only">
-              Full-size product photo. Use close button to exit.
+              Full-size product photo. Use the close button to exit.
             </DialogDescription>
-            <img
-              src={currentImage.url}
-              alt={currentImage.altText || productName}
-              className="w-full h-auto max-h-[90vh] object-contain"
-            />
+            <div className="mt-8 flex max-h-[85vh] w-full items-center justify-center overflow-auto rounded-sm bg-black/40 p-2">
+              <img
+                src={currentImage.url}
+                alt={currentImage.altText || productName}
+                className="max-h-[min(80vh,900px)] w-full object-contain"
+              />
+            </div>
           </DialogContent>
         </Dialog>
 

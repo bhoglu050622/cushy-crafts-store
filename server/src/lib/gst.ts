@@ -15,10 +15,12 @@ export function resolveGstRate(
   product: { gst_rate?: unknown; category_id?: string | null } | null,
   categorySlugById: Map<string, string>
 ): number {
+  const slug = product?.category_id
+    ? categorySlugById.get(String(product.category_id))
+    : null;
+  if (slug === "pillow-covers" || slug === "table-linens") return 5;
   const raw = product?.gst_rate;
   const n = raw != null && raw !== "" ? Number(raw) : NaN;
   if (Number.isFinite(n)) return n;
-  const slug = product?.category_id ? categorySlugById.get(String(product.category_id)) : null;
-  if (slug === "pillow-covers" || slug === "table-linens") return 5;
   return 18;
 }

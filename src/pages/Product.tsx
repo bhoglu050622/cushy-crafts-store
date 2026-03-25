@@ -229,16 +229,19 @@ const Product = () => {
                   <label htmlFor="custom-curtain-size" className="text-xs tracking-widest text-foreground/70">
                     CUSTOM SIZE (OPTIONAL)
                   </label>
+                  <p className="text-xs text-foreground/50 -mt-1">
+                    Add your width/drop after choosing a preset size above (e.g. Window – 5 Feet).
+                  </p>
                   <Input
                     id="custom-curtain-size"
                     value={customCurtainSize}
                     onChange={(e) => setCustomCurtainSize(e.target.value)}
-                    placeholder="e.g. 5.5 ft width, 6 ft drop"
+                    placeholder="e.g. 5.5 ft, 6 ft, 6.5 ft"
                     className="h-11"
                     maxLength={200}
                   />
-                  <p className="text-xs text-foreground/55 leading-relaxed">
-                    If you order a custom size, that piece cannot be returned or exchanged.
+                  <p className="text-xs text-amber-800/90 dark:text-amber-200/90 leading-relaxed font-medium">
+                    Custom-sized curtains are not returnable.
                   </p>
                 </div>
               )}
@@ -323,10 +326,10 @@ const Product = () => {
                   <AccordionContent className="text-foreground/70 text-sm space-y-2">
                     <p>Free shipping on orders above ₹999</p>
                     <p>Standard delivery: 5-7 business days</p>
-                    <p>Easy 7-day returns for unused items</p>
+                    <p>Easy 7-day returns for unused items (excluding custom curtain sizes)</p>
                     {isCurtainProduct && (
                       <p className="text-foreground/80">
-                        Custom-sized curtains are made to your measurements and are not returnable.
+                        Custom-sized curtains are not returnable.
                       </p>
                     )}
                   </AccordionContent>

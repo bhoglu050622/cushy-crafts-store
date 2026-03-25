@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   authFormBlockedMessage,
   authExceptionMessage,
-} from "@/lib/firebaseAuthForm";
+} from "@/lib/apiAuthForm";
 import { Loader2 } from "lucide-react";
 
 const signupSchema = z.object({
