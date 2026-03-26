@@ -4,9 +4,6 @@ import { apiConfigMessage, isApiConfigured, ApiRequestError } from "@/lib/api";
 export function authExceptionMessage(err: unknown): string {
   if (err instanceof ApiRequestError) {
     const m = err.message || "";
-    if (/firebase|identitytoolkit|configuration-not-found|auth\/api-key/i.test(m)) {
-      return "Account sign-in is unavailable. Confirm the site is on the latest version, then try again. If this continues, the server may be unreachable.";
-    }
     const low = m.toLowerCase();
     if (
       low.includes("invalid login credentials") ||
@@ -32,9 +29,6 @@ export function authExceptionMessage(err: unknown): string {
   const raw =
     err instanceof Error ? err.message : typeof err === "string" ? err : "";
   const msg = raw.toLowerCase();
-  if (/firebase|identitytoolkit|configuration-not-found|auth\/api-key/i.test(raw)) {
-    return "Account sign-in failed. Use the latest version of this site or contact support.";
-  }
   if (
     msg.includes("invalid login credentials") ||
     msg.includes("invalid email or password")

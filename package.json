@@ -12,15 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "import:products-excel": "node scripts/import-products-from-excel.js",
-    "import:excel:postgres": "npm run import:excel --prefix server",
-    "import:firestore": "node scripts/import-from-products-json.js",
-    "env:firebase-web": "node scripts/fetch-web-sdk-config.mjs",
-    "env:firebase-web:cli": "node scripts/print-vite-env-from-firebase-cli.mjs",
-    "firebase:login": "firebase login",
-    "firebase:reauth": "firebase login --reauth",
-    "deploy:firestore": "firebase deploy --only firestore",
-    "deploy:firebase": "firebase deploy --only firestore,storage,functions",
-    "deploy:firebase:functions": "firebase deploy --only functions"
+    "import:excel:postgres": "npm run import:excel --prefix server"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -89,8 +81,6 @@
     "eslint": "^9.32.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
-    "firebase-admin": "^13.7.0",
-    "firebase-tools": "^15.11.0",
     "globals": "^15.15.0",
     "google-auth-library": "^10.6.2",
     "jsdom": "^20.0.3",
