@@ -22,7 +22,7 @@ const Header = () => {
   ];
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50">
+    <header id="site-header" className="fixed top-0 left-0 right-0 z-50">
       {/* Announcement bar */}
       <div className="bg-foreground/90 text-background text-[11px] py-2 text-center tracking-widest font-light">
         Art, created for the spaces you call home.
