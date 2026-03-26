@@ -84,7 +84,9 @@ function normalizeCategorySlug(categoryName) {
   if (v === "tablecloth" || v === "table linens" || v === "table-linens") return "table-linens";
   if (v === "cushion cover" || v === "cushion covers" || v === "pillow covers" || v === "pillow-covers")
     return "pillow-covers";
-  if (v === "home textiles" || v === "home-textiles" || v === "home textile") return "home-textiles";
+  // Homepage no longer has a dedicated "Home Textiles" category.
+  // Keep those products visible by mapping them into "table-linens".
+  if (v === "home textiles" || v === "home-textiles" || v === "home textile") return "table-linens";
 
   // Fallback: slugify what we received.
   return slugify(v);
@@ -92,10 +94,10 @@ function normalizeCategorySlug(categoryName) {
 
 function categorySortOrder(slug) {
   const defaults = new Map([
-    ["pillow-covers", 0],
+    ["new-arrivals", 0],
     ["curtains", 1],
-    ["table-linens", 2],
-    ["home-textiles", 3],
+    ["pillow-covers", 2],
+    ["table-linens", 3],
   ]);
   if (defaults.has(slug)) return defaults.get(slug);
   return 1000;
@@ -255,10 +257,11 @@ async function main() {
     }
   };
 
-  ensureDefault("pillow-covers", "Pillow Covers", 0);
+  // Category order: New Arrivals, Curtains, Pillow Covers, Table Linens
+  ensureDefault("new-arrivals", "New Arrivals", 0);
   ensureDefault("curtains", "Curtains", 1);
-  ensureDefault("table-linens", "Table Linens", 2);
-  ensureDefault("home-textiles", "Home Textiles", 3);
+  ensureDefault("pillow-covers", "Pillow Covers", 2);
+  ensureDefault("table-linens", "Table Linens", 3);
 
   let extraSortCursor = 4;
 
@@ -318,7 +321,10 @@ async function main() {
         product_id: productId,
         sku: v.sku,
         color: v.color,
-        size: v.size,
+        // Pillow covers should always show the correct size.
+        // Some Excel rows contain inconsistent values (26/27/28...), so we
+        // normalize them at generation time.
+        size: categorySlug === "pillow-covers" ? "18 x 18" : v.size,
         price: Number(v.price),
         compare_at_price: v.compareAtPrice != null ? Number(v.compareAtPrice) : null,
         stock_quantity: Number(v.stock) || 0,
@@ -366,33 +372,25 @@ async function main() {
     });
   }
 
-  // Backfill `home-textiles` if the Excel sheet doesn't provide that category.
-  // This mirrors `scripts/assign-home-textiles.js` behavior for the DB.
-  {
-    const home = categoriesBySlug.get("home-textiles") || null;
-    const table = categoriesBySlug.get("table-linens") || null;
-    if (home && table) {
-      const hasHome = products.some((p) => p.category_id === home.id && p.is_active);
-      if (!hasHome) {
-        const donor = products
-          .filter((p) => p.category_id === table.id && p.is_active)
-          .sort(
-            (a, b) =>
-              Date.parse(String(b.created_at ?? 0)) -
-              Date.parse(String(a.created_at ?? 0))
-          )
-          .slice(0, 10);
-        for (const p of donor) {
-          p.category_id = home.id;
-          p.updated_at = now;
-        }
-        console.log(`Backfilled home-textiles from table-linens: ${donor.length} products`);
-      }
-    }
-  }
-
   // Fill category representative images (like `/api/categories/representative-images`).
   for (const cat of categories) {
+    if (cat.slug === "new-arrivals") {
+      const candidateProduct = products
+        .filter((p) => p.is_active)
+        .sort((a, b) => {
+          const aFeatured = a.is_featured ? 1 : 0;
+          const bFeatured = b.is_featured ? 1 : 0;
+          if (aFeatured !== bFeatured) return bFeatured - aFeatured;
+          return Date.parse(b.created_at) - Date.parse(a.created_at);
+        })[0];
+
+      const primary =
+        candidateProduct?.images?.find((img) => img.is_primary) ||
+        (candidateProduct?.images ?? []).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))[0];
+      cat.image_url = primary?.url ?? null;
+      continue;
+    }
+
     const catProducts = products
       .filter((p) => p.category_id === cat.id && p.is_active)
       .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));

@@ -8,7 +8,7 @@ const Privacy = () => (
       description="How Aavis Decor collects, uses, and protects customer data across orders, accounts, and communication."
       canonical="/privacy"
     />
-    <div className="pt-32 pb-20 min-h-screen">
+    <div className="pt-40 pb-20 min-h-screen">
       <div className="container max-w-3xl">
         <h1 className="font-display text-4xl mb-8">Privacy Policy</h1>
         <div className="prose text-foreground/80 space-y-6">

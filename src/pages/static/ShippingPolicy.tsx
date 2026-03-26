@@ -8,7 +8,7 @@ const ShippingPolicy = () => (
       description="Shipping timelines, charges, COD availability, and delivery coverage for Aavis Decor orders in India."
       canonical="/shipping-policy"
     />
-    <div className="pt-32 pb-20 min-h-screen">
+    <div className="pt-40 pb-20 min-h-screen">
       <div className="container max-w-3xl">
         <h1 className="font-display text-4xl mb-8">Shipping Policy</h1>
         <div className="prose text-foreground/80 space-y-6">

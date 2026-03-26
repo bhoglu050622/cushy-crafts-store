@@ -288,6 +288,7 @@ export const usePaginatedProducts = (params: PaginatedProductsParams = {}) => {
 
       let categoryId: string | null = null;
       const normalizedCategorySlug = normalizeSlug(categorySlug);
+      const isNewArrivals = normalizedCategorySlug === "new-arrivals";
       if (normalizedCategorySlug) {
         const match = rawCategories.find(
           (c) => normalizeSlug(c.slug ?? "") === normalizedCategorySlug
@@ -305,7 +306,8 @@ export const usePaginatedProducts = (params: PaginatedProductsParams = {}) => {
 
       // Base filtering mirrors server-side whereClause (colors/sizes/inStock are applied after slicing).
       const baseFiltered = activeProducts.filter((p) => {
-        if (categoryId && p.category_id !== categoryId) return false;
+        // `new-arrivals` is a virtual category: show newest items across all products.
+        if (categoryId && !isNewArrivals && p.category_id !== categoryId) return false;
         if (fabric && (p.fabric ?? null) !== fabric) return false;
         if (hasPriceMin) {
           const maxVariant = Number(p.max_variant_price ?? 0);
@@ -318,7 +320,7 @@ export const usePaginatedProducts = (params: PaginatedProductsParams = {}) => {
         return true;
       });
 
-      const totalCount = baseFiltered.length;
+      const NEW_ARRIVALS_CAP = 60;
 
       const orderParts = (() => {
         if (hasPriceMin) return "priceMin";
@@ -354,8 +356,11 @@ export const usePaginatedProducts = (params: PaginatedProductsParams = {}) => {
         }
       });
 
+      const windowed = isNewArrivals ? baseFiltered.slice(0, NEW_ARRIVALS_CAP) : baseFiltered;
+      const totalCount = windowed.length;
+
       const offset = (page - 1) * pageSize;
-      const sliced = baseFiltered.slice(offset, offset + pageSize);
+      const sliced = windowed.slice(offset, offset + pageSize);
 
       // Post-filter: mirrors server behavior for colors/sizes/inStockOnly.
       let products = sliced.map((p) => mapApiProductToDetails(p, categoriesMap));

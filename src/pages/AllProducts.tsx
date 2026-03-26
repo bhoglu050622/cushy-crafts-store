@@ -82,7 +82,7 @@ const AllProducts = () => {
         description="Shop all premium handcrafted pillow covers, curtains, table linens and home textiles at Aavis Decor."
         canonical="/collections"
       />
-      <div className="pt-32 pb-20">
+      <div className="pt-40 pb-20">
         <div className="container mb-8">
           <nav className="flex items-center gap-2 text-xs text-foreground/50">
             <Link to="/" className="hover:text-foreground transition-colors">Home</Link>

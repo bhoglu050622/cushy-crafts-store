@@ -93,7 +93,7 @@ const Category = () => {
     return (
       <StoreLayout>
         <PageMeta title="Category not found" description="Browse all products at Aavis Decor." />
-        <div className="pt-32 pb-20 container text-center">
+        <div className="pt-40 pb-20 container text-center">
           <h1 className="font-display text-2xl text-foreground mb-2">Category not found</h1>
           <p className="text-foreground/60 mb-6">There is no category matching &quot;{slug}&quot;.</p>
           <Button asChild><Link to="/collections">View all products</Link></Button>
@@ -109,7 +109,7 @@ const Category = () => {
         description={category?.description || `Browse ${category?.name || normalizedSlug} at Aavis Decor. Premium home textiles.`}
         canonical={normalizedSlug ? `/category/${normalizedSlug}` : "/collections"}
       />
-      <div className="pt-32 pb-20">
+      <div className="pt-40 pb-20">
         {/* Breadcrumb */}
         <div className="container mb-8">
           <nav className="flex items-center gap-2 text-xs text-foreground/50">

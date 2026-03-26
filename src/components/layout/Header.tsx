@@ -78,7 +78,7 @@ const Header = () => {
         </div>
 
         {/* Desktop Nav */}
-        <nav className="hidden lg:flex justify-center gap-10 pb-4">
+        <nav className="hidden lg:flex justify-center gap-10 pb-4 flex-nowrap whitespace-nowrap overflow-x-auto">
           {navLinks.map((link) => (
             <Link
               key={link.href}

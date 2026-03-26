@@ -29,7 +29,7 @@ const Account = () => {
 
   return (
     <StoreLayout>
-      <div className="pt-32 pb-20 min-h-screen">
+      <div className="pt-40 pb-20 min-h-screen">
         <div className="container">
           <h1 className="font-display text-3xl mb-8">My Account</h1>
 

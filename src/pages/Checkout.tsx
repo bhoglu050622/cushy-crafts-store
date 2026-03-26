@@ -171,7 +171,7 @@ const Checkout = () => {
     return (
       <StoreLayout>
         <PageMeta title="Checkout" description="Complete your Aavis Decor order." canonical="/checkout" noIndex />
-        <div className="pt-32 pb-20 min-h-screen container max-w-lg text-center">
+        <div className="pt-40 pb-20 min-h-screen container max-w-lg text-center">
           <h1 className="font-display text-2xl mb-4">Your bag is empty</h1>
           <Button asChild><Link to="/">Continue Shopping</Link></Button>
         </div>
