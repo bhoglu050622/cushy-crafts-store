@@ -114,7 +114,7 @@ const Product = () => {
   if (isLoading) {
     return (
       <StoreLayout>
-        <div className="pt-40 pb-20 container">
+        <div className="pb-20 container">
           <div className="grid lg:grid-cols-2 gap-10">
             <Skeleton className="aspect-[3/4]" />
             <div className="space-y-6">
@@ -132,7 +132,7 @@ const Product = () => {
   if (error || !product) {
     return (
       <StoreLayout>
-        <div className="pt-40 pb-20 container text-center">
+        <div className="pb-20 container text-center">
           <h1 className="text-2xl font-display mb-4">Product not found</h1>
           <p className="text-foreground/60 mb-6">The product you're looking for doesn't exist or has been removed.</p>
           <Button asChild><Link to="/">Continue Shopping</Link></Button>
@@ -166,7 +166,7 @@ const Product = () => {
         canonical={`/product/${product.slug}`}
         jsonLd={productJsonLd}
       />
-      <div className="pt-40 pb-20">
+      <div className="pb-20">
         {/* Breadcrumb */}
         <div className="container mb-8">
           <nav className="flex items-center gap-2 text-xs text-foreground/50">

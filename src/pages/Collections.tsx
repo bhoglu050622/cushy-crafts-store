@@ -69,7 +69,7 @@ const Collections = () => {
         description={(collectionData as Record<string, unknown>)?.description as string || `Shop the ${(collectionData as Record<string, unknown>)?.title || slug} collection at Aavis Decor.`}
         canonical={slug ? `/collections/${slug}` : "/collections"}
       />
-      <div className="pt-40 pb-20">
+      <div className="pb-20">
         <div className="container mb-8">
           <nav className="flex items-center gap-2 text-xs text-foreground/50">
             <Link to="/" className="hover:text-foreground transition-colors">Home</Link>

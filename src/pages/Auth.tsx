@@ -19,7 +19,7 @@ const Auth = () => {
 
   return (
     <StoreLayout>
-      <div className="pt-40 pb-20 min-h-screen bg-background">
+      <div className="pb-20 min-h-screen bg-background">
         <div className="container max-w-md mx-auto px-6">
           {/* Header */}
           <div className="text-center mb-10">

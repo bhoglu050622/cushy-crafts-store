@@ -18,7 +18,7 @@ const Cart = () => {
     return (
       <StoreLayout>
         <PageMeta title="Shopping Bag" description="Your Aavis Decor shopping bag is empty. Continue shopping for pillow covers, curtains, and home textiles." canonical="/cart" noIndex />
-        <div className="pt-40 pb-20 min-h-screen">
+        <div className="pb-20 min-h-screen">
           <div className="container max-w-lg text-center">
             <ShoppingBag className="h-20 w-20 text-foreground/20 mx-auto mb-6" />
             <h1 className="font-display text-2xl mb-3">Your bag is empty</h1>
@@ -37,7 +37,7 @@ const Cart = () => {
   return (
     <StoreLayout>
       <PageMeta title="Shopping Bag" description="Review your Aavis Decor cart. Free shipping on orders above ₹999." canonical="/cart" noIndex />
-      <div className="pt-40 pb-20">
+      <div className="pb-20">
         {/* Breadcrumb */}
         <div className="container mb-8">
           <nav className="flex items-center gap-2 text-xs text-foreground/50">

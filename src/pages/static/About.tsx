@@ -8,7 +8,7 @@ const About = () => (
       description="Learn about Aavis Decor — our story, mission, and commitment to quality handcrafted home textiles."
       canonical="/about"
     />
-    <div className="pt-40 pb-20 min-h-screen">
+    <div className="pb-20 min-h-screen">
       <div className="container max-w-3xl">
         <h1 className="font-display text-4xl mb-8">Our Story</h1>
         <div className="prose prose-lg text-foreground/70 space-y-6">

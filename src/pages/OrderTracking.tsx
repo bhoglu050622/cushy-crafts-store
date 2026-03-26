@@ -51,7 +51,7 @@ const OrderTracking = () => {
 
   return (
     <StoreLayout>
-      <div className="pt-40 pb-20 min-h-screen">
+      <div className="pb-20 min-h-screen">
         <div className="container max-w-2xl">
           <h1 className="font-display text-3xl mb-2 text-center">Track Your Order</h1>
           <p className="text-foreground/60 text-center mb-8">Enter your order number to see the latest status.</p>

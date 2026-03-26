@@ -79,7 +79,7 @@ const HeroBanner = () => {
         <div className="absolute inset-0 bg-gradient-to-t from-foreground/50 via-transparent to-foreground/20" />
       </div>
 
-      <div className="container relative z-10 pt-40 pb-20">
+      <div className="container relative z-10 pt-0 pb-20">
         <div className="max-w-2xl">
           <motion.div
             initial={{ opacity: 0, x: -30 }}

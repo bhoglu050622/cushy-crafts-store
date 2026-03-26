@@ -10,6 +10,8 @@ const StoreLayout = ({ children }: StoreLayoutProps) => {
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
+      {/* Header is `fixed`, so add a consistent spacer below it for all pages. */}
+      <div aria-hidden className="h-28 lg:h-32" />
       <main className="flex-1">{children}</main>
       <Footer />
     </div>

@@ -26,7 +26,7 @@ const OrderConfirmation = () => {
 
   return (
     <StoreLayout>
-      <div className="pt-40 pb-20 min-h-screen">
+      <div className="pb-20 min-h-screen">
         <div className="container max-w-lg text-center">
           <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-6" />
           <h1 className="font-display text-3xl mb-3">Thank You!</h1>
